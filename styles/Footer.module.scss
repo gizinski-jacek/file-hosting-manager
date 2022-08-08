@@ -1,0 +1,25 @@
+.footer {
+	width: 100%;
+	text-align: center;
+	// background-color: var(--bs-dark);
+
+	a {
+		font-weight: 600;
+		// color: var(--bs-light);
+		padding: 4px;
+		display: flex;
+		float: right;
+		align-items: center;
+		text-decoration: none;
+		width: fit-content;
+	}
+
+	svg {
+		margin: 0 8px;
+		box-sizing: content-box;
+		border-radius: 50%;
+		padding: 1px;
+		// background-color: var(--bs-light);
+		// fill: var(--bs-dark);
+	}
+}
