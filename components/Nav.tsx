@@ -1,7 +1,11 @@
 import { Button, Link } from '@mui/material';
+import { useSession } from 'next-auth/react';
+import { signOut } from 'next-auth/react';
 import styles from '../styles/Nav.module.scss';
 
 const Nav = () => {
+	const { data: user } = useSession();
+
 	return (
 		<div className={styles.nav}>
 			<div className={styles.left}>
@@ -17,9 +21,31 @@ const Nav = () => {
 				>
 					Dashboard
 				</Button>
-				<Button size='small' variant='outlined' color='secondary'>
-					Acc
-				</Button>
+				{user ? (
+					<Button
+						size='small'
+						variant='outlined'
+						color='secondary'
+						onClick={() => signOut()}
+					>
+						Sign Out
+					</Button>
+				) : null}
+				{user ? (
+					<Button size='small' variant='outlined' color='secondary'>
+						{user?.user?.username}
+					</Button>
+				) : (
+					<Button
+						component='a'
+						href='/'
+						size='small'
+						variant='outlined'
+						color='secondary'
+					>
+						Sign In
+					</Button>
+				)}
 				<Button size='small' variant='outlined' color='primary'>
 					Toggle D/L Mode
 				</Button>
