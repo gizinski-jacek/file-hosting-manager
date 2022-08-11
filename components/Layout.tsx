@@ -1,9 +1,9 @@
-import styles from '../styles/Layout.module.scss';
+import { SessionProvider } from 'next-auth/react';
+import { Session } from 'next-auth';
 import Head from 'next/head';
 import Nav from './Nav';
 import Footer from './Footer';
-import { SessionProvider } from 'next-auth/react';
-import { Session } from 'next-auth';
+import styles from '../styles/Layout.module.scss';
 
 interface Props {
 	children: React.ReactNode;
