@@ -2,11 +2,17 @@ import styles from '../styles/Layout.module.scss';
 import Head from 'next/head';
 import Nav from './Nav';
 import Footer from './Footer';
-import { UserProvider } from '../hooks/UserProvider';
+import { SessionProvider } from 'next-auth/react';
+import { Session } from 'next-auth';
 
-const Layout = ({ children }: React.PropsWithChildren) => {
+interface Props {
+	children: React.ReactNode;
+	session: Session;
+}
+
+const Layout = ({ children, session }: Props) => {
 	return (
-		<UserProvider>
+		<SessionProvider session={session}>
 			<div className={styles.container}>
 				<Head>
 					<title>File Hosting Manager</title>
@@ -17,7 +23,7 @@ const Layout = ({ children }: React.PropsWithChildren) => {
 				<main className={styles.main}>{children}</main>
 				<Footer />
 			</div>
-		</UserProvider>
+		</SessionProvider>
 	);
 };
 
