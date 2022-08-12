@@ -44,7 +44,7 @@ const Mixdrop = ({ api_data }: Props | undefined) => {
 			console.log(error);
 		}
 	};
-	console.log(formData);
+
 	return (
 		<div>
 			{api_data ? (
