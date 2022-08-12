@@ -26,7 +26,7 @@ const Nav = () => {
 						size='small'
 						variant='outlined'
 						color='secondary'
-						onClick={() => signOut()}
+						onClick={() => signOut({ callbackUrl: '/' })}
 					>
 						Sign Out
 					</Button>
