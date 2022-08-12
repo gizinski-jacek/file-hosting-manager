@@ -11,6 +11,11 @@ declare module 'next-auth' {
 			_id?: string;
 			username?: string;
 			email?: string;
+			api_data: {
+				host: string;
+				api_key: string;
+				[key: string]: string;
+			}[];
 		} & DefaultSession['user'];
 	}
 }
