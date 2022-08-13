@@ -62,25 +62,25 @@ const Dashboard: NextPage = () => {
 			<div className={styles.contents}>
 				{selectedFileHost === 'gofile' ? (
 					<Gofile
-						api_data={user.user.api_data.find(
+						api_data={user?.user?.api_data?.find(
 							(d) => d.host === selectedFileHost
 						)}
 					/>
 				) : selectedFileHost === 'pixeldrain' ? (
 					<Pixeldrain
-						api_data={user.user.api_data.find(
+						api_data={user?.user?.api_data?.find(
 							(d) => d.host === selectedFileHost
 						)}
 					/>
 				) : selectedFileHost === 'mixdrop' ? (
 					<Mixdrop
-						api_data={user.user.api_data.find(
+						api_data={user?.user?.api_data?.find(
 							(d) => d.host === selectedFileHost
 						)}
 					/>
 				) : selectedFileHost === 'anonfiles' ? (
 					<Anonfiles
-						api_data={user.user.api_data.find(
+						api_data={user?.user?.api_data?.find(
 							(d) => d.host === selectedFileHost
 						)}
 					/>
