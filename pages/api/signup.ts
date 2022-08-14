@@ -13,18 +13,18 @@ interface UserModel {
 }
 
 interface UserSignUpModel extends UserModel {
-	repeat_password: string;
+	confirm_password: string;
 }
 
 const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
 	Yup.object().shape({
 		email: Yup.string()
-			.min(4, { email: 'Min 4 characters' })
-			.max(32, { email: 'Max 32 characters' })
-			.email({ email: 'Invalid email format' })
+			.min(4, 'Email min length 4 characters')
+			.max(32, 'Email max length 32 characters')
+			.email('Invalid email format')
 			.test(
 				'email-taken',
-				{ email: 'Email is already taken' },
+				'Email is already taken',
 				async (value, testContext) => {
 					const account_list: UserModel[] = await User.find({
 						email: value,
@@ -32,13 +32,13 @@ const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
 					return account_list.length === 0;
 				}
 			)
-			.required({ email: 'Email is required' }),
+			.required('Email is required'),
 		username: Yup.string()
-			.min(4, { username: 'Min 4 characters' })
-			.max(32, { username: 'Max 32 characters' })
+			.min(4, 'Username min length 4 characters')
+			.max(32, 'Username max length 32 characters')
 			.test(
 				'username-taken',
-				{ username: 'Username is already taken' },
+				'Username is already taken',
 				async (value, testContext) => {
 					const account_list: UserModel[] = await User.find({
 						username: value,
@@ -46,26 +46,21 @@ const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
 					return account_list.length === 0;
 				}
 			)
-			.required({ username: 'Username is required' }),
+			.required('Username is required'),
 		password: Yup.string()
-			.min(4, { password: 'Min 4 characters' })
-			.max(32, { password: 'Max 32 characters' })
-			.required({ password: 'Password is required' }),
-
-		repeat_password: Yup.string()
-			.min(4, { repeat_password: 'Min 4 characters' })
-			.max(32, { repeat_password: 'Max 32 characters' })
-			.oneOf([Yup.ref('password')], {
-				repeat_password: 'Passwords do not match',
-			})
-			.required({ repeat_password: 'Password repeat is required' }),
+			.min(4, 'Password min length 4 characters')
+			.max(32, 'Password max length 32 characters')
+			.required('Password is required'),
+		confirm_password: Yup.string()
+			.min(4, 'Confirm password min length 4 characters')
+			.max(32, 'Confirm password max length 32 characters')
+			.oneOf([Yup.ref('password')], 'Passwords do not match')
+			.required('Confirm password is required'),
 	});
 
 export default async function handler(
 	req: NextApiRequest,
-	res: NextApiResponse<
-		{ [key: string]: string | Boolean } | { [key: string]: string }[]
-	>
+	res: NextApiResponse
 ) {
 	const { errors } = await yupValidation(userSignUpValidationSchema, req.body);
 	if (errors) {
@@ -81,7 +76,7 @@ export default async function handler(
 	});
 	const savedUser = await newUser.save();
 	if (!savedUser) {
-		return res.status(404).json([{ email: 'Error creating user' }]);
+		return res.status(404).json('Error creating user');
 	}
 	return res.status(200).json({ success: true });
 }
