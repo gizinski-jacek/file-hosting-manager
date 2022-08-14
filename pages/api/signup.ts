@@ -5,20 +5,12 @@ import yupValidation from '../../lib/yupValidation';
 import connectMongo from '../../lib/mongodb';
 import User from '../../models/user';
 import bcryptjs from 'bcryptjs';
+import { SignInData, SignUpData } from '../../lib/types/types';
 
-interface UserModel {
-	email: string;
-	username: string;
-	password: string;
-}
-
-interface UserSignUpModel extends UserModel {
-	confirm_password: string;
-}
-
-const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
-	Yup.object().shape({
+const userSignUpValidationSchema: Yup.SchemaOf<SignUpData> = Yup.object().shape(
+	{
 		email: Yup.string()
+			.trim()
 			.min(4, 'Email min length 4 characters')
 			.max(32, 'Email max length 32 characters')
 			.email('Invalid email format')
@@ -26,7 +18,7 @@ const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
 				'email-taken',
 				'Email is already taken',
 				async (value, testContext) => {
-					const account_list: UserModel[] = await User.find({
+					const account_list: SignInData[] = await User.find({
 						email: value,
 					}).exec();
 					return account_list.length === 0;
@@ -34,13 +26,14 @@ const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
 			)
 			.required('Email is required'),
 		username: Yup.string()
+			.trim()
 			.min(4, 'Username min length 4 characters')
 			.max(32, 'Username max length 32 characters')
 			.test(
 				'username-taken',
 				'Username is already taken',
 				async (value, testContext) => {
-					const account_list: UserModel[] = await User.find({
+					const account_list: UserSignInModel[] = await User.find({
 						username: value,
 					}).exec();
 					return account_list.length === 0;
@@ -48,15 +41,18 @@ const userSignUpValidationSchema: Yup.SchemaOf<UserSignUpModel> =
 			)
 			.required('Username is required'),
 		password: Yup.string()
+			.trim()
 			.min(4, 'Password min length 4 characters')
 			.max(32, 'Password max length 32 characters')
 			.required('Password is required'),
 		confirm_password: Yup.string()
+			.trim()
 			.min(4, 'Confirm password min length 4 characters')
 			.max(32, 'Confirm password max length 32 characters')
 			.oneOf([Yup.ref('password')], 'Passwords do not match')
 			.required('Confirm password is required'),
-	});
+	}
+);
 
 export default async function handler(
 	req: NextApiRequest,
