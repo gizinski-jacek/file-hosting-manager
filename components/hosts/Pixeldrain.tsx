@@ -15,10 +15,6 @@ interface FormData {
 	[key: string]: string;
 }
 
-interface Props extends FormData {
-	host: string;
-}
-
 interface PixeldrainFile {
 	id: string;
 	name: string;
@@ -28,8 +24,9 @@ interface PixeldrainFile {
 	[key: string]: string | number;
 }
 
-const Pixeldrain = ({ api_data }: Props | undefined) => {
-	const [formData, setFormData] = useState({ api_key: '' });
+const Pixeldrain = () => {
+	const [userHasAPIKey, setUserHasAPIKey] = useState(false);
+	const [formData, setFormData] = useState<FormData>({ api_key: '' });
 	const [filesData, setFilesData] = useState<PixeldrainFile[]>();
 	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>();
 	const [selectedFolder, setSelectedFolder] = useState('root');
@@ -59,12 +56,8 @@ const Pixeldrain = ({ api_data }: Props | undefined) => {
 	const handleGetMainData = async () => {
 		try {
 			const res: AxiosResponse[] = await axios.all([
-				axios.get('/api/host/pixeldrain/get-user-files', {
-					withCredentials: true,
-				}),
-				axios.get('/api/host/pixeldrain/get-user-folders', {
-					withCredentials: true,
-				}),
+				axios.get('/api/host/pixeldrain/get-user-files'),
+				axios.get('/api/host/pixeldrain/get-user-folders'),
 			]);
 			setFilesData(res[0].data);
 			setFoldersData(res[1].data);
@@ -111,8 +104,23 @@ const Pixeldrain = ({ api_data }: Props | undefined) => {
 	};
 
 	useEffect(() => {
-		handleGetMainData();
-	}, [api_data]);
+		(async () => {
+			try {
+				const res = await axios.get('/api/user/has-key?host=pixeldrain', {
+					withCredentials: true,
+				});
+				setUserHasAPIKey(res.data);
+			} catch (error) {
+				console.log(error);
+			}
+		})();
+	}, []);
+
+	useEffect(() => {
+		if (userHasAPIKey) {
+			handleGetMainData();
+		}
+	}, [userHasAPIKey]);
 
 	useEffect(() => {
 		handleGetFolderFilesData();
@@ -120,7 +128,7 @@ const Pixeldrain = ({ api_data }: Props | undefined) => {
 
 	return (
 		<div>
-			{api_data ? (
+			{userHasAPIKey ? (
 				<div className='main'>
 					<Grid container p={2}>
 						<Refresh
@@ -168,10 +176,17 @@ const Pixeldrain = ({ api_data }: Props | undefined) => {
 						<Grid container>
 							{filesData?.map((file) => {
 								return (
-									<Grid container xs={12} m={2} key={file.id} id={file.id}>
+									<Grid
+										container
+										alignItems={'center'}
+										mx={2}
+										key={file.id}
+										id={file.id}
+									>
 										<Grid
-											container
+											item
 											xs={7}
+											sx={{ display: 'flex' }}
 											justifyContent='space-between'
 											alignItems='center'
 										>
