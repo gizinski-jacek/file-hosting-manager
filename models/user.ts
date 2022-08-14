@@ -1,22 +1,28 @@
 import mongoose from 'mongoose';
-import 'mongoose-type-email';
+import { MongoUserModel } from '../lib/types/types';
+import validator from 'validator';
 
 const Schema = mongoose.Schema;
 
-const UserSchema = new Schema(
+const UserSchema = new Schema<MongoUserModel>(
 	{
 		email: {
-			type: Schema.Types.Email,
+			type: String,
 			minlength: 4,
 			maxlength: 32,
+			trim: true,
+			unique: true,
 			required: true,
 			select: false,
+			validate: [validator.isEmail, 'Provide valid email'],
 		},
 		username: { type: String, minlength: 2, maxlength: 32, required: true },
 		password: {
 			type: String,
 			minlength: 4,
 			maxlength: 128,
+			trim: true,
+			unique: true,
 			required: true,
 			select: false,
 		},
@@ -26,11 +32,6 @@ const UserSchema = new Schema(
 				{
 					host: {
 						type: String,
-						minlength: 4,
-						maxlength: 32,
-					},
-					email: {
-						type: Schema.Types.Email,
 						minlength: 4,
 						maxlength: 32,
 					},
