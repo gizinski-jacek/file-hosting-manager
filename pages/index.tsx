@@ -1,3 +1,9 @@
+import type { NextPage } from 'next';
+import React, { useState } from 'react';
+import { useRouter } from 'next/router';
+import { useSession } from 'next-auth/react';
+import { signIn } from 'next-auth/react';
+import axios, { AxiosResponse } from 'axios';
 import {
 	Button,
 	FormControl,
@@ -6,14 +12,9 @@ import {
 	Input,
 	InputLabel,
 } from '@mui/material';
-import type { NextPage } from 'next';
-import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { signIn } from 'next-auth/react';
-import axios from 'axios';
 import styles from '../styles/Home.module.scss';
 
-type LoginData = {
+type SignInData = {
 	username_or_email: string;
 	password: string;
 };
@@ -22,10 +23,10 @@ type SignUpData = {
 	email: string;
 	username: string;
 	password: string;
-	repeat_password: string;
+	confirm_password: string;
 };
 
-const initialLoginValues = {
+const initialSignInValues = {
 	username_or_email: '',
 	password: '',
 };
@@ -34,29 +35,32 @@ const initialSignUpValues = {
 	email: '',
 	username: '',
 	password: '',
-	repeat_password: '',
+	confirm_password: '',
 };
 
 const Home: NextPage = () => {
 	const { data: user } = useSession();
 
-	const [loginForm, setLoginForm] = useState(true);
-	const [loginData, setLoginData] = useState<LoginData>(initialLoginValues);
-	const [signUpData, setSignUpData] = useState<SignUpData>(initialSignUpValues);
-	const [loginFormError, setLoginFormError] =
-		useState<LoginData>(initialLoginValues);
-	const [signUpFormError, setSignUpFormError] =
-		useState<SignUpData>(initialSignUpValues);
+	const router = useRouter();
 
-	const handleFormChange = () => {
-		setLoginData(initialLoginValues);
+	const [showForm, setShowForm] = useState('signIn');
+	const [signInData, setSignInData] = useState<SignInData>(initialSignInValues);
+	const [signUpData, setSignUpData] = useState<SignUpData>(initialSignUpValues);
+	const [forgotPasswordData, setForgotPasswordData] = useState('');
+	const [signInFormError, setSignInFormError] = useState<string[]>([]);
+	const [signUpFormError, setSignUpFormError] = useState<string[]>([]);
+	const [forgotPasswordError, setForgotPasswordError] = useState<string[]>([]);
+
+	const handleFormChange = (value: string) => {
+		setSignInData(initialSignInValues);
 		setSignUpData(initialSignUpValues);
-		setLoginForm((prevState) => !prevState);
+		setForgotPasswordData('');
+		setShowForm(value);
 	};
 
-	const handleLoginChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+	const handleSignInChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.target;
-		setLoginData((prevState) => ({
+		setSignInData((prevState) => ({
 			...prevState,
 			[name]: value,
 		}));
@@ -70,49 +74,30 @@ const Home: NextPage = () => {
 		}));
 	};
 
-	const handleLoginSubmit = async () => {
-		// for (const [key, value] of Object.entries(loginData)) {
-		// 	if (!value) {
-		// 		setLoginFormError((prevState) => ({
-		// 			...prevState,
-		// 			[key]: value,
-		// 		}));
-		// 		return;
-		// 	}
-		// }
-		signIn('credentials', {
-			...loginData,
+	const handleSignInSubmit = async () => {
+		const res = await signIn('credentials', {
+			...signInData,
 			redirect: false,
-			callbackUrl: '/dashboard',
 		});
-		// try {
-		// 	const res = await axios.post('/api/auth/login', loginData);
-		// 	updateUser(res.data);
-		// 	router.push('/dashboard');
-		// } catch (error: any) {
-		// 	console.log(error.response.data);
-		// 	// setLoginFormError(error);
-		// }
+		if (!res) {
+			setSignInFormError((prevState) => ['Sign In error']);
+			return;
+		}
+		if (res.ok) {
+			router.push('/dashboard');
+		} else {
+			setSignInFormError((prevState) => ['Check credentials']);
+		}
 	};
 
 	const handleSignUpSubmit = async () => {
-		for (const [key, value] of Object.entries(signUpData)) {
-			if (!value) {
-				setSignUpFormError((prevState) => ({
-					...prevState,
-					[key]: value,
-				}));
-				return;
-			}
-		}
 		try {
-			await axios.post('/api/signup', signUpData);
-			setLoginData(initialLoginValues);
+			const res: AxiosResponse = await axios.post('/api/signup', signUpData);
+			setSignInData(initialSignInValues);
 			setSignUpData(initialSignUpValues);
-			setLoginForm(true);
+			setShowForm('signIn');
 		} catch (error: any) {
-			console.log(error.response.data);
-			// setSignUpFormError(error);
+			setSignUpFormError((prevState) => [...error.response.data]);
 		}
 	};
 
@@ -125,124 +110,196 @@ const Home: NextPage = () => {
 			</div>
 			{user ? null : (
 				<div>
-					<h2>Login</h2>
-					<div>
-						{loginForm ? (
-							<FormGroup>
-								<FormControl>
-									<InputLabel htmlFor='username_or_email'>
-										Username or Email
-									</InputLabel>
-									<Input
-										id='login_username_or_email'
-										name='username_or_email'
-										type='text'
-										inputProps={{ minLength: 4, maxLength: 32 }}
-										value={loginData.username_or_email}
-										onChange={handleLoginChange}
-										placeholder='Username or Email'
-										required
-									/>
-								</FormControl>
-								<FormControl>
-									<InputLabel htmlFor='password'>Password</InputLabel>
-									<Input
-										id='login_password'
-										name='password'
-										type='password'
-										inputProps={{ minLength: 4, maxLength: 32 }}
-										value={loginData.password}
-										onChange={handleLoginChange}
-										placeholder='Password'
-										required
-									/>
-								</FormControl>
+					{showForm === 'signIn' ? (
+						<FormGroup>
+							<h2>Sign In</h2>
+							<FormControl sx={{ m: 1 }}>
+								<InputLabel htmlFor='username_or_email'>
+									Username or Email
+								</InputLabel>
+								<Input
+									id='username_or_email'
+									name='username_or_email'
+									type='text'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									value={signInData.username_or_email}
+									onChange={handleSignInChange}
+									placeholder='Username or Email'
+									required
+								/>
+							</FormControl>
+							<FormControl sx={{ m: 1 }}>
+								<InputLabel htmlFor='password'>Password</InputLabel>
+								<Input
+									id='password'
+									name='password'
+									type='password'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									value={signInData.password}
+									onChange={handleSignInChange}
+									placeholder='Password'
+									required
+								/>
+							</FormControl>
+							{signInFormError?.map((e, index) => (
+								<FormHelperText sx={{ color: 'red' }} key={index}>
+									{e}
+								</FormHelperText>
+							))}
+							{signInFormError ? (
+								<FormHelperText
+									sx={{ cursor: 'pointer', color: 'orange' }}
+									onClick={() => handleFormChange('forgotPassword')}
+								>
+									Forgot password?
+								</FormHelperText>
+							) : null}
+							<Button type='button' onClick={handleSignInSubmit}>
+								Sign In
+							</Button>
+							<FormControl>
+								<FormHelperText>Need an account?</FormHelperText>
+								<Button
+									type='button'
+									onClick={() => handleFormChange('signUp')}
+								>
+									Sign Up
+								</Button>
+							</FormControl>
+						</FormGroup>
+					) : showForm === 'signUp' ? (
+						<FormGroup>
+							<h2>Sign Up</h2>
+							<FormControl required>
+								<InputLabel htmlFor='email'>Email</InputLabel>
+								<Input
+									id='email'
+									name='email'
+									type='email'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									value={signUpData.email}
+									onChange={handleSignUpChange}
+									placeholder='Email'
+									required
+								/>
+							</FormControl>
+							<FormControl required>
+								<InputLabel htmlFor='username'>Username</InputLabel>
+								<Input
+									id='username'
+									name='username'
+									type='text'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									value={signUpData.username}
+									onChange={handleSignUpChange}
+									placeholder='Username'
+									required
+								/>
+							</FormControl>
+							<FormControl>
+								<InputLabel htmlFor='password'>Password</InputLabel>
+								<Input
+									id='password'
+									name='password'
+									type='password'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									error={
+										signUpData.password === signUpData.confirm_password
+											? false
+											: true
+									}
+									value={signUpData.password}
+									onChange={handleSignUpChange}
+									placeholder='Password'
+									required
+								/>
+							</FormControl>
+							<FormControl>
+								<InputLabel htmlFor='confirm_password'>
+									Confirm Password
+								</InputLabel>
+								<Input
+									id='confirm_password'
+									name='confirm_password'
+									type='password'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									error={
+										signUpData.password === signUpData.confirm_password
+											? false
+											: true
+									}
+									value={signUpData?.confirm_password}
+									onChange={handleSignUpChange}
+									placeholder='Confirm Password'
+									required
+								/>
+							</FormControl>
+							{signUpFormError?.map((e, index) => (
+								<FormHelperText sx={{ color: 'red' }} key={index}>
+									{e}
+								</FormHelperText>
+							))}
+							<Button type='button' onClick={handleSignUpSubmit}>
+								Register
+							</Button>
+							<FormControl>
 								<FormHelperText>Forgot password?</FormHelperText>
-								<Button onClick={handleLoginSubmit}>Login</Button>
-								<FormControl>
-									<FormHelperText>Need an account?</FormHelperText>
-									<Button type='submit' onClick={handleFormChange}>
-										Sign Up
-									</Button>
-								</FormControl>
-							</FormGroup>
-						) : (
-							<FormGroup>
-								<FormControl>
-									<InputLabel htmlFor='email'>Email</InputLabel>
-									<Input
-										id='signup_email'
-										name='email'
-										type='email'
-										inputProps={{ minLength: 4, maxLength: 32 }}
-										value={signUpData.email}
-										onChange={handleSignUpChange}
-										placeholder='Email'
-										required
-									/>
-									{/* <FormHelperText>{signUpFormError.email}</FormHelperText> */}
-								</FormControl>
-								<FormControl>
-									<InputLabel htmlFor='username'>Username</InputLabel>
-									<Input
-										id='signup_username'
-										name='username'
-										type='text'
-										inputProps={{ minLength: 4, maxLength: 32 }}
-										value={signUpData.username}
-										onChange={handleSignUpChange}
-										placeholder='Username'
-										required
-									/>
-								</FormControl>
-								<FormControl>
-									<InputLabel htmlFor='password'>Password</InputLabel>
-									<Input
-										id='signup_password'
-										name='password'
-										type='password'
-										inputProps={{ minLength: 4, maxLength: 32 }}
-										error={
-											signUpData.password === signUpData.repeat_password
-												? false
-												: true
-										}
-										value={signUpData.password}
-										onChange={handleSignUpChange}
-										placeholder='Password'
-										required
-									/>
-								</FormControl>
-								<FormControl>
-									<InputLabel htmlFor='repeat_password'>
-										Repeat Password
-									</InputLabel>
-									<Input
-										id='signup_repeat_password'
-										name='repeat_password'
-										type='password'
-										inputProps={{ minLength: 4, maxLength: 32 }}
-										error={
-											signUpData.password === signUpData.repeat_password
-												? false
-												: true
-										}
-										value={signUpData?.repeat_password}
-										onChange={handleSignUpChange}
-										placeholder='Repeat Password'
-										required
-									/>
-								</FormControl>
-								<Button onClick={handleSignUpSubmit}>Register</Button>
-								<FormControl>
-									<FormHelperText>Already have an account?</FormHelperText>
-									<Button type='submit' onClick={handleFormChange}>
-										Sign In
-									</Button>
-								</FormControl>
-							</FormGroup>
-						)}
-					</div>
+								<Button
+									type='button'
+									onClick={() => handleFormChange('forgotPassword')}
+								>
+									Recover Account
+								</Button>
+								<FormHelperText>Already have an account?</FormHelperText>
+								<Button
+									type='button'
+									onClick={() => handleFormChange('signIn')}
+								>
+									Sign In
+								</Button>
+							</FormControl>
+						</FormGroup>
+					) : showForm === 'forgotPassword' ? (
+						<FormGroup>
+							<h2>Recover Account</h2>
+							<FormControl sx={{ m: 1 }}>
+								<InputLabel htmlFor='username_or_email'>
+									Username or Email
+								</InputLabel>
+								<Input
+									id='username_or_email'
+									name='username_or_email'
+									type='text'
+									inputProps={{ minLength: 4, maxLength: 32 }}
+									value={forgotPasswordData}
+									onChange={handleSignInChange}
+									placeholder='Username or Email'
+									required
+								/>
+							</FormControl>
+							{forgotPasswordError?.map((e, index) => (
+								<FormHelperText sx={{ color: 'red' }} key={index}>
+									{e}
+								</FormHelperText>
+							))}
+							<FormControl>
+								<FormHelperText>Remember password?</FormHelperText>
+								<Button
+									type='button'
+									onClick={() => handleFormChange('signIn')}
+								>
+									Sign In
+								</Button>
+								<FormHelperText>Need an account?</FormHelperText>
+								<Button
+									type='button'
+									onClick={() => handleFormChange('signUp')}
+								>
+									Sign Up
+								</Button>
+							</FormControl>
+						</FormGroup>
+					) : null}
 				</div>
 			)}
 		</div>
