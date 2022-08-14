@@ -13,18 +13,7 @@ import {
 	InputLabel,
 } from '@mui/material';
 import styles from '../styles/Home.module.scss';
-
-type SignInData = {
-	username_or_email: string;
-	password: string;
-};
-
-type SignUpData = {
-	email: string;
-	username: string;
-	password: string;
-	confirm_password: string;
-};
+import { SignInData, SignUpData } from '../lib/types/types';
 
 const initialSignInValues = {
 	username_or_email: '',
