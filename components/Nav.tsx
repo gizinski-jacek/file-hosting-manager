@@ -32,7 +32,13 @@ const Nav = () => {
 					</Button>
 				) : null}
 				{user ? (
-					<Button size='small' variant='outlined' color='secondary'>
+					<Button
+						component='a'
+						href='/account'
+						size='small'
+						variant='outlined'
+						color='secondary'
+					>
 						{user?.user?.username}
 					</Button>
 				) : (
