@@ -21,6 +21,7 @@ const UserSchema = new Schema(
 			select: false,
 		},
 		api_data: {
+			select: false,
 			type: [
 				{
 					host: {
