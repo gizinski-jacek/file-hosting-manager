@@ -9,24 +9,11 @@ import {
 	InputLabel,
 } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
-
-interface FormData {
-	api_key: string;
-	[key: string]: string;
-}
-
-interface PixeldrainFile {
-	id: string;
-	name: string;
-	date_upload: string;
-	size: number;
-	downloads: number;
-	[key: string]: string | number;
-}
+import { APIFormData, PixeldrainFile } from '../../lib/types/types';
 
 const Pixeldrain = () => {
 	const [userHasAPIKey, setUserHasAPIKey] = useState(false);
-	const [formData, setFormData] = useState<FormData>({ api_key: '' });
+	const [formData, setFormData] = useState<APIFormData>({ api_key: '' });
 	const [filesData, setFilesData] = useState<PixeldrainFile[]>();
 	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>();
 	const [selectedFolder, setSelectedFolder] = useState('root');
@@ -41,13 +28,9 @@ const Pixeldrain = () => {
 
 	const handleFormSubmit = async () => {
 		try {
-			const res = await axios.post(
-				'/api/user/key-update?host=pixeldrain',
-				formData,
-				{
-					withCredentials: true,
-				}
-			);
+			await axios.post('/api/user/key-update?host=pixeldrain', formData, {
+				withCredentials: true,
+			});
 		} catch (error) {
 			console.log(error);
 		}
@@ -56,8 +39,12 @@ const Pixeldrain = () => {
 	const handleGetMainData = async () => {
 		try {
 			const res: AxiosResponse[] = await axios.all([
-				axios.get('/api/host/pixeldrain/get-user-files'),
-				axios.get('/api/host/pixeldrain/get-user-folders'),
+				axios.get('/api/host/pixeldrain/get-user-files', {
+					withCredentials: true,
+				}),
+				axios.get('/api/host/pixeldrain/get-user-folders', {
+					withCredentials: true,
+				}),
 			]);
 			setFilesData(res[0].data);
 			setFoldersData(res[1].data);
@@ -68,18 +55,20 @@ const Pixeldrain = () => {
 
 	const handleGetFolderFilesData = useCallback(async () => {
 		try {
-			if (selectedFolder === 'root') {
-				handleGetMainData();
-			} else {
-				const res: AxiosResponse = await axios.get(
-					`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`
-				);
-				setFilesData(res.data);
+			if (userHasAPIKey) {
+				if (selectedFolder === 'root') {
+					handleGetMainData();
+				} else {
+					const res: AxiosResponse = await axios.get(
+						`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`
+					);
+					setFilesData(res.data);
+				}
 			}
 		} catch (error) {
 			console.log(error);
 		}
-	}, [selectedFolder]);
+	}, [selectedFolder, userHasAPIKey]);
 
 	const handleGetSingleFileData = async (fileId: string, fileName: string) => {
 		try {
