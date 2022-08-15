@@ -1,8 +1,6 @@
 import { Button } from '@mui/material';
 import type { NextPage } from 'next';
 import { useState } from 'react';
-import { useSession } from 'next-auth/react';
-import axios from 'axios';
 import styles from '../../styles/Dashboard.module.scss';
 import Gofile from '../../components/hosts/Gofile';
 import Pixeldrain from '../../components/hosts/Pixeldrain';
@@ -10,8 +8,6 @@ import Mixdrop from '../../components/hosts/Mixdrop';
 import Anonfiles from '../../components/hosts/Anonfiles';
 
 const Dashboard: NextPage = () => {
-	const { data: user } = useSession();
-
 	const [selectedFileHost, setSelectedFileHost] = useState('');
 
 	const handleFileHostChange = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -61,29 +57,13 @@ const Dashboard: NextPage = () => {
 			</div>
 			<div className={styles.contents}>
 				{selectedFileHost === 'gofile' ? (
-					<Gofile
-						api_data={user?.user?.api_data?.find(
-							(d) => d.host === selectedFileHost
-						)}
-					/>
+					<Gofile />
 				) : selectedFileHost === 'pixeldrain' ? (
-					<Pixeldrain
-						api_data={user?.user?.api_data?.find(
-							(d) => d.host === selectedFileHost
-						)}
-					/>
+					<Pixeldrain />
 				) : selectedFileHost === 'mixdrop' ? (
-					<Mixdrop
-						api_data={user?.user?.api_data?.find(
-							(d) => d.host === selectedFileHost
-						)}
-					/>
+					<Mixdrop />
 				) : selectedFileHost === 'anonfiles' ? (
-					<Anonfiles
-						api_data={user?.user?.api_data?.find(
-							(d) => d.host === selectedFileHost
-						)}
-					/>
+					<Anonfiles />
 				) : (
 					<div>Choose file host and provide API key to manage your files</div>
 				)}
