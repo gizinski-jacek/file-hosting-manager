@@ -14,10 +14,10 @@ export default async function handler(
 	try {
 		const session = await unstable_getServerSession(req, res, nextAuthOptions);
 		const { host } = req.query as { host: string };
-		if (session) {
+		if (session && session.user) {
 			if (req.method === 'GET') {
 				await connectMongo();
-				const user: MongoUserModel = await User.findById(session.user?._id)
+				const user: MongoUserModel = await User.findById(session.user._id)
 					.select('+api_data')
 					.exec();
 				if (!user) {

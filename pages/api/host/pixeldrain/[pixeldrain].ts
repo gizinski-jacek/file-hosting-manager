@@ -14,11 +14,11 @@ export default async function handler(
 ) {
 	try {
 		const session = await unstable_getServerSession(req, res, nextAuthOptions);
-		if (session) {
+		if (session && session.user) {
 			if (req.method === 'GET') {
 				if (req.query.pixeldrain === 'get-user-files') {
 					await connectMongo();
-					const user: MongoUserModel = await User.findById(session.user?._id)
+					const user: MongoUserModel = await User.findById(session.user._id)
 						.select('+api_data')
 						.exec();
 					if (!user) {
@@ -45,7 +45,7 @@ export default async function handler(
 				}
 				if (req.query.pixeldrain === 'get-user-folders') {
 					await connectMongo();
-					const user: MongoUserModel = await User.findById(session.user?._id)
+					const user: MongoUserModel = await User.findById(session.user._id)
 						.select('+api_data')
 						.exec();
 					if (!user) {
