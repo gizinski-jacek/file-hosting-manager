@@ -31,6 +31,7 @@ export const nextAuthOptions: NextAuthOptions = {
 							{ username: credentials.username_or_email },
 						],
 					})
+						.lean()
 						.select('+password')
 						.exec();
 					if (!user) {
@@ -43,6 +44,7 @@ export const nextAuthOptions: NextAuthOptions = {
 					if (!match) {
 						return null;
 					}
+					delete user.password;
 					return user;
 				} catch (error) {
 					return null;
