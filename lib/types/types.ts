@@ -47,7 +47,7 @@ export interface PixeldrainFile {
 	[key: string]: string | number;
 }
 
-export interface APIKeysData {
+export interface APIKeyData {
 	host: string;
 	api_key: string;
 	[key: string]: string;
