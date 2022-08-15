@@ -28,14 +28,17 @@ const UserSchema = new Schema<MongoUserModel>(
 		},
 		api_data: {
 			select: false,
+			_id: false,
 			type: [
 				{
-					host: {
+					host: { type: String, minlength: 4, maxlength: 32, required: true },
+					api_key: {
 						type: String,
-						minlength: 4,
+						minlength: 8,
 						maxlength: 32,
+						required: true,
 					},
-					api_key: { type: String, minlength: 8, maxlength: 128 },
+					email: { type: String, minlength: 8, maxlength: 128 },
 				},
 			],
 		},
