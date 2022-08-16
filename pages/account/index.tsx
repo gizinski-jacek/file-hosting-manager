@@ -10,40 +10,21 @@ import {
 	InputLabel,
 } from '@mui/material';
 import { Box } from '@mui/system';
-
-const initialKeysDataValues = [
-	{
-		host: 'gofile',
-		api_key: '',
-	},
-	{
-		host: 'pixeldrain',
-		api_key: '',
-	},
-	{
-		host: 'mixdrop',
-		api_key: '',
-		email: '',
-	},
-	{
-		host: 'anonfiles',
-		api_key: '',
-	},
-];
+import { defaultKeysDataValues } from '../../lib/defaults';
 
 const Account = () => {
 	const { data: user } = useSession();
-	const [keysData, setKeysData] = useState<APIKeyData[]>(initialKeysDataValues);
+	const [keysData, setKeysData] = useState<APIKeyData[]>(defaultKeysDataValues);
 
 	const aggregateData = useCallback((data: APIKeyData[]) => {
-		const filledData = initialKeysDataValues.map((defaults) => {
-			const userKeyData = data.find((d) => d.host === defaults.host);
+		const filledData = defaultKeysDataValues.map((data) => {
+			const userKeyData = data.find((d) => d.host === data.host);
 			if (userKeyData) {
-				for (const key in defaults) {
-					defaults[key] = userKeyData[key];
+				for (const key in data) {
+					data[key] = userKeyData[key];
 				}
 			}
-			return defaults;
+			return data;
 		});
 		setKeysData(filledData);
 	}, []);
@@ -81,7 +62,7 @@ const Account = () => {
 		try {
 			const hostData = keysData.find((d) => d.host === hostName);
 			const res = await axios.put('/api/user/account-data', hostData);
-			setKeysData(res.data);
+			aggregateData(res.data as APIKeyData[]);
 		} catch (error) {
 			console.log(error);
 		}
