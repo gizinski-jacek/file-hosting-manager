@@ -1,11 +1,15 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
 import type { NextApiRequest, NextApiResponse } from 'next';
 import * as Yup from 'yup';
-import yupValidation from '../../lib/yupValidation';
-import connectMongo from '../../lib/mongodb';
-import User from '../../models/user';
+import yupValidation from '../../../lib/yupValidation';
+import connectMongo from '../../../lib/mongodb';
+import User from '../../../models/user';
 import bcryptjs from 'bcryptjs';
-import { SignInData, SignUpData } from '../../lib/types/types';
+import {
+	SignInData,
+	SignUpData,
+	UserSignInModel,
+} from '../../../lib/types/types';
 
 const userSignUpValidationSchema: Yup.SchemaOf<SignUpData> = Yup.object().shape(
 	{
