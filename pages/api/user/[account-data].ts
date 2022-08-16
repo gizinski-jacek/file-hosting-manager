@@ -15,36 +15,65 @@ export default async function handler(
 		if (session && session.user) {
 			if (req.method === 'GET') {
 				await connectMongo();
-				const userData = await User.findById(session.user._id)
-					.select('-_id api_data')
-					.exec();
-				if (!userData) {
-					return res.status(404).json('User not found');
-				}
-				return res.status(200).json(userData);
-			}
-			if (req.method === 'PUT') {
-				//
-			}
-			if (req.method === 'DELETE') {
-				const { host } = req.query;
-				await connectMongo();
-				const user: MongoUserModel | null = await User.findById(
-					session.user._id
-				)
-					.lean()
-					.select('api_data')
+				const user = await User.findById(session.user._id)
+					.select('+api_data')
 					.exec();
 				if (!user) {
 					return res.status(404).json('User not found');
 				}
-				const newData = user.api_data.filter((d) => d.host !== host);
-				if (!newData) {
-					return res.status(404).json('Data to delete not found');
+				return res.status(200).json(user.api_data);
+			}
+			if (req.method === 'PUT') {
+				await connectMongo();
+				const user: MongoUserModel = await User.findById(session.user._id)
+					.select('+api_data')
+					.exec();
+				if (!user) {
+					return res.status(404).json('User not found');
+				}
+				const apiData = user.api_data.find((d) => d.host === req.body.host);
+				if (apiData) {
+					const updatedUser = await User.findByIdAndUpdate(
+						user._id,
+						{ $set: { 'api_data.$[el]': req.body } },
+						{
+							arrayFilters: [{ 'el.host': req.body.host }],
+							timestamps: true,
+							new: true,
+						}
+					)
+						.select('-_id api_data')
+						.exec();
+					if (!updatedUser) {
+						return res.status(404).json('Error updating user');
+					}
+					return res.status(200).json(updatedUser.api_data);
+				} else {
+					const updatedUser = await User.findByIdAndUpdate(
+						user._id,
+						{ $addToSet: { api_data: req.body } },
+						{ upsert: true, timestamps: true, new: true }
+					)
+						.select('-_id api_data')
+						.exec();
+					if (!updatedUser) {
+						return res.status(404).json('Failed to update user');
+					}
+					return res.status(200).json(updatedUser.api_data);
+				}
+			}
+			if (req.method === 'DELETE') {
+				const { host } = req.query as { host: string };
+				await connectMongo();
+				const user: MongoUserModel | null = await User.findById(
+					session.user._id
+				).exec();
+				if (!user) {
+					return res.status(404).json('User not found');
 				}
 				const updatedUser = await User.findByIdAndUpdate(
 					session.user._id,
-					{ $set: { api_data: newData } },
+					{ $pull: { api_data: { host: host } } },
 					{ timestamps: true, new: true }
 				)
 					.select('-_id api_data')
@@ -59,7 +88,6 @@ export default async function handler(
 			return res.status(401).json('Unauthorized access');
 		}
 	} catch (error) {
-		console.log(error);
 		return res.status(404).json(error);
 	}
 }
