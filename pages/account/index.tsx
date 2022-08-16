@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { APIKeyData } from '../../lib/types/types';
@@ -11,7 +11,7 @@ import {
 } from '@mui/material';
 import { Box } from '@mui/system';
 
-const dataTemplate = [
+const initialKeysDataValues = [
 	{
 		host: 'gofile',
 		api_key: '',
@@ -33,23 +33,48 @@ const dataTemplate = [
 
 const Account = () => {
 	const { data: user } = useSession();
-	const [keysData, setKeysData] = useState<APIKeyData[]>(dataTemplate);
+	const [keysData, setKeysData] = useState<APIKeyData[]>(initialKeysDataValues);
 
-	const getUserData = async () => {
+	const aggregateData = useCallback((data: APIKeyData[]) => {
+		const filledData = initialKeysDataValues.map((defaults) => {
+			const userKeyData = data.find((d) => d.host === defaults.host);
+			if (userKeyData) {
+				for (const key in defaults) {
+					defaults[key] = userKeyData[key];
+				}
+			}
+			return defaults;
+		});
+		setKeysData(filledData);
+	}, []);
+
+	const getUserKeysData = useCallback(async () => {
 		try {
 			const res = await axios.get('/api/user/account-data');
-			setKeysData(res.data.api_data);
+			aggregateData(res.data as APIKeyData[]);
 		} catch (error) {
 			console.log(error);
 		}
-	};
+	}, [aggregateData]);
 
-	const handleChangeUserAPIKey = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const { id, name, value } = e.target;
-		const newState = keysData.map((item) =>
-			item.host !== id.split('__')[0] ? item : { ...item, [name]: value }
-		);
-		setKeysData(newState);
+	const handleChangeUserAPIKey = (
+		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+		hostName: string
+	) => {
+		const { name, value } = e.target;
+		if (keysData.find((d) => d.host === hostName)) {
+			const newState = keysData.map((item) =>
+				item.host !== hostName ? item : { ...item, [name]: value }
+			);
+			setKeysData(newState);
+		} else {
+			const data = {
+				host: hostName,
+				api_key: '',
+				[name]: value,
+			};
+			setKeysData((prevState) => [...prevState, data]);
+		}
 	};
 
 	const handleFormSubmit = async (hostName: string) => {
@@ -65,43 +90,35 @@ const Account = () => {
 	const handleDataDelete = async (hostName: string) => {
 		try {
 			const res = await axios.delete(`/api/user/account-data?host=${hostName}`);
-			setKeysData(res.data);
+			aggregateData(res.data as APIKeyData[]);
 		} catch (error) {
 			console.log(error);
 		}
 	};
 
 	useEffect(() => {
-		getUserData();
-	}, [user]);
+		getUserKeysData();
+	}, [user, getUserKeysData]);
 
-	return dataTemplate.map((template, index) => {
+	return keysData.map((data, index) => {
 		const renderArray = [];
-		const filledData: APIKeyData = template;
-		for (const [key, value] of Object.entries(template)) {
-			const hostData = keysData.find((k) => k.host === template.host);
-			if (hostData) {
-				for (const k in template) {
-					filledData[k] = hostData[k];
-				}
-			}
+		for (const [key, value] of Object.entries(data)) {
 			if (key !== 'host') {
 				renderArray.push(
 					<FormControl key={key + index}>
 						<InputLabel key={key + 'label'} htmlFor={key}>
-							{filledData.host.charAt(0).toUpperCase() +
-								filledData.host.slice(1)}{' '}
+							{data.host.charAt(0).toUpperCase() + data.host.slice(1)}{' '}
 							{key.replace('_', ' ')}:
 						</InputLabel>
 						<Input
 							sx={{ m: 2 }}
 							key={key + 'input'}
-							id={filledData.host + '__' + key}
+							id={data.host + '__' + key}
 							name={key}
 							type={key === 'email' ? 'email' : 'text'}
 							inputProps={{ minLength: 4, maxLength: 32 }}
 							value={value}
-							onChange={handleChangeUserAPIKey}
+							onChange={(e) => handleChangeUserAPIKey(e, data.host)}
 							placeholder={`${value} ${key.replace('_', ' ')}`}
 						/>
 					</FormControl>
@@ -119,20 +136,13 @@ const Account = () => {
 					}}
 				>
 					<h3>
-						{filledData.host.charAt(0).toUpperCase() + filledData.host.slice(1)}{' '}
-						credentials
+						{data.host.charAt(0).toUpperCase() + data.host.slice(1)} credentials
 					</h3>
 					<div>
-						<Button
-							type='button'
-							onClick={() => handleFormSubmit(filledData.host)}
-						>
+						<Button type='button' onClick={() => handleFormSubmit(data.host)}>
 							Save
 						</Button>
-						<Button
-							type='button'
-							onClick={() => handleDataDelete(filledData.host)}
-						>
+						<Button type='button' onClick={() => handleDataDelete(data.host)}>
 							Delete
 						</Button>
 					</div>
