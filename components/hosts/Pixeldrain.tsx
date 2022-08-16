@@ -10,10 +10,15 @@ import {
 } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
 import { APIFormData, PixeldrainFile } from '../../lib/types/types';
+import { useSession } from 'next-auth/react';
 
 const Pixeldrain = () => {
+	const { data: user } = useSession();
 	const [userHasAPIKey, setUserHasAPIKey] = useState(false);
-	const [formData, setFormData] = useState<APIFormData>({ api_key: '' });
+	const [formData, setFormData] = useState<APIFormData>({
+		host: 'pixeldrain',
+		api_key: '',
+	});
 	const [filesData, setFilesData] = useState<PixeldrainFile[]>();
 	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>();
 	const [selectedFolder, setSelectedFolder] = useState('root');
@@ -28,9 +33,15 @@ const Pixeldrain = () => {
 
 	const handleFormSubmit = async () => {
 		try {
-			await axios.post('/api/user/key-update?host=pixeldrain', formData, {
-				withCredentials: true,
-			});
+			if (user) {
+				await axios.put('/api/user/account-data', formData, {
+					withCredentials: true,
+				});
+			} else {
+				await axios.post('/api/user/temp-user', formData, {
+					withCredentials: true,
+				});
+			}
 		} catch (error) {
 			console.log(error);
 		}
@@ -218,6 +229,7 @@ const Pixeldrain = () => {
 				</div>
 			) : (
 				<FormGroup>
+					<h2>Pixeldrain credentials required</h2>
 					<FormControl>
 						<InputLabel htmlFor='api_key'>Input your API key</InputLabel>
 						<Input
