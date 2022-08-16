@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react';
 import { signIn } from 'next-auth/react';
 import axios, { AxiosResponse } from 'axios';
 import {
+	Box,
 	Button,
 	FormControl,
 	FormGroup,
@@ -14,18 +15,7 @@ import {
 } from '@mui/material';
 import styles from '../styles/Home.module.scss';
 import { SignInData, SignUpData } from '../lib/types/types';
-
-const initialSignInValues = {
-	username_or_email: '',
-	password: '',
-};
-
-const initialSignUpValues = {
-	email: '',
-	username: '',
-	password: '',
-	confirm_password: '',
-};
+import { defaultSignInValues, defaultSignUpValues } from '../lib/defaults';
 
 const Home: NextPage = () => {
 	const { data: user } = useSession();
@@ -33,17 +23,24 @@ const Home: NextPage = () => {
 	const router = useRouter();
 
 	const [showForm, setShowForm] = useState('signIn');
-	const [signInData, setSignInData] = useState<SignInData>(initialSignInValues);
-	const [signUpData, setSignUpData] = useState<SignUpData>(initialSignUpValues);
-	const [forgotPasswordData, setForgotPasswordData] = useState('');
+	const [signInData, setSignInData] = useState<SignInData>(defaultSignInValues);
+	const [signUpData, setSignUpData] = useState<SignUpData>(defaultSignUpValues);
+	const [recoverAccountData, setRecoverAccountData] = useState('');
 	const [signInFormError, setSignInFormError] = useState<string[]>([]);
 	const [signUpFormError, setSignUpFormError] = useState<string[]>([]);
-	const [forgotPasswordError, setForgotPasswordError] = useState<string[]>([]);
+	const [recoverAccountError, setRecoverAccountError] = useState<string[]>([]);
+
+	const handleResetFormsAndErrors = () => {
+		setSignInData(defaultSignInValues);
+		setSignUpData(defaultSignUpValues);
+		setRecoverAccountData('');
+		setSignInFormError([]);
+		setSignUpFormError([]);
+		setRecoverAccountError([]);
+	};
 
 	const handleFormChange = (value: string) => {
-		setSignInData(initialSignInValues);
-		setSignUpData(initialSignUpValues);
-		setForgotPasswordData('');
+		handleResetFormsAndErrors();
 		setShowForm(value);
 	};
 
@@ -63,34 +60,51 @@ const Home: NextPage = () => {
 		}));
 	};
 
+	const handleRecoverAccountChange = (
+		e: React.ChangeEvent<HTMLInputElement>
+	) => {
+		const { value } = e.target;
+		setRecoverAccountData(value);
+	};
+
 	const handleSignInSubmit = async () => {
 		const res = await signIn('credentials', {
 			...signInData,
 			redirect: false,
 		});
 		if (!res) {
-			setSignInFormError((prevState) => ['Sign In error']);
+			setSignInFormError(['Sign In error']);
 			return;
 		}
 		if (res.ok) {
 			router.push('/dashboard');
 		} else {
-			setSignInFormError((prevState) => ['Check credentials']);
+			setSignInFormError(['Check credentials']);
 		}
 	};
 
 	const handleSignUpSubmit = async () => {
 		try {
-			const res: AxiosResponse = await axios.post('/api/signup', signUpData);
-			setSignInData(initialSignInValues);
-			setSignUpData(initialSignUpValues);
+			await axios.post('/api/user/signup', signUpData);
+			handleResetFormsAndErrors();
 			setShowForm('signIn');
 		} catch (error: any) {
-			setSignUpFormError((prevState) => [...error.response.data]);
+			setSignUpFormError([...error.response.data]);
 		}
 	};
 
-	const handleFormError = () => {};
+	const handleRecoverAccountSubmit = async () => {
+		try {
+			await axios.post('/api/user/recover-account', {
+				username_or_email: recoverAccountData,
+			});
+			handleResetFormsAndErrors();
+			setShowForm('signIn');
+		} catch (error: any) {
+			console.log(error.response.data);
+			setRecoverAccountError([error.response.data]);
+		}
+	};
 
 	return (
 		<div className={styles.container}>
@@ -101,7 +115,9 @@ const Home: NextPage = () => {
 				<div>
 					{showForm === 'signIn' ? (
 						<FormGroup>
-							<h2>Sign In</h2>
+							<Box sx={{ my: 1 }}>
+								<h2>Sign In</h2>
+							</Box>
 							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='username_or_email'>
 									Username or Email
@@ -131,14 +147,14 @@ const Home: NextPage = () => {
 								/>
 							</FormControl>
 							{signInFormError?.map((e, index) => (
-								<FormHelperText sx={{ color: 'red' }} key={index}>
+								<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 									{e}
 								</FormHelperText>
 							))}
-							{signInFormError ? (
+							{signInFormError.length > 0 ? (
 								<FormHelperText
-									sx={{ cursor: 'pointer', color: 'orange' }}
-									onClick={() => handleFormChange('forgotPassword')}
+									sx={{ m: 1, cursor: 'pointer', color: 'orange' }}
+									onClick={() => handleFormChange('recoverAccount')}
 								>
 									Forgot password?
 								</FormHelperText>
@@ -146,20 +162,17 @@ const Home: NextPage = () => {
 							<Button type='button' onClick={handleSignInSubmit}>
 								Sign In
 							</Button>
-							<FormControl>
-								<FormHelperText>Need an account?</FormHelperText>
-								<Button
-									type='button'
-									onClick={() => handleFormChange('signUp')}
-								>
-									Sign Up
-								</Button>
-							</FormControl>
+							<FormHelperText sx={{ m: 1 }}>Need an account?</FormHelperText>
+							<Button type='button' onClick={() => handleFormChange('signUp')}>
+								Sign Up
+							</Button>
 						</FormGroup>
 					) : showForm === 'signUp' ? (
 						<FormGroup>
-							<h2>Sign Up</h2>
-							<FormControl required>
+							<Box sx={{ my: 1 }}>
+								<h2>Sign Up</h2>
+							</Box>
+							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='email'>Email</InputLabel>
 								<Input
 									id='email'
@@ -172,7 +185,7 @@ const Home: NextPage = () => {
 									required
 								/>
 							</FormControl>
-							<FormControl required>
+							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='username'>Username</InputLabel>
 								<Input
 									id='username'
@@ -185,7 +198,7 @@ const Home: NextPage = () => {
 									required
 								/>
 							</FormControl>
-							<FormControl>
+							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='password'>Password</InputLabel>
 								<Input
 									id='password'
@@ -203,7 +216,7 @@ const Home: NextPage = () => {
 									required
 								/>
 							</FormControl>
-							<FormControl>
+							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='confirm_password'>
 									Confirm Password
 								</InputLabel>
@@ -224,7 +237,7 @@ const Home: NextPage = () => {
 								/>
 							</FormControl>
 							{signUpFormError?.map((e, index) => (
-								<FormHelperText sx={{ color: 'red' }} key={index}>
+								<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 									{e}
 								</FormHelperText>
 							))}
@@ -232,14 +245,16 @@ const Home: NextPage = () => {
 								Register
 							</Button>
 							<FormControl>
-								<FormHelperText>Forgot password?</FormHelperText>
+								<FormHelperText sx={{ m: 1 }}>Forgot password?</FormHelperText>
 								<Button
 									type='button'
-									onClick={() => handleFormChange('forgotPassword')}
+									onClick={() => handleFormChange('recoverAccount')}
 								>
 									Recover Account
 								</Button>
-								<FormHelperText>Already have an account?</FormHelperText>
+								<FormHelperText sx={{ m: 1 }}>
+									Already have an account?
+								</FormHelperText>
 								<Button
 									type='button'
 									onClick={() => handleFormChange('signIn')}
@@ -248,9 +263,11 @@ const Home: NextPage = () => {
 								</Button>
 							</FormControl>
 						</FormGroup>
-					) : showForm === 'forgotPassword' ? (
+					) : showForm === 'recoverAccount' ? (
 						<FormGroup>
-							<h2>Recover Account</h2>
+							<Box sx={{ my: 1 }}>
+								<h2>Recover Account</h2>
+							</Box>
 							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='username_or_email'>
 									Username or Email
@@ -260,26 +277,31 @@ const Home: NextPage = () => {
 									name='username_or_email'
 									type='text'
 									inputProps={{ minLength: 4, maxLength: 32 }}
-									value={forgotPasswordData}
-									onChange={handleSignInChange}
+									value={recoverAccountData}
+									onChange={handleRecoverAccountChange}
 									placeholder='Username or Email'
 									required
 								/>
 							</FormControl>
-							{forgotPasswordError?.map((e, index) => (
-								<FormHelperText sx={{ color: 'red' }} key={index}>
+							{recoverAccountError?.map((e, index) => (
+								<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 									{e}
 								</FormHelperText>
 							))}
+							<Button type='button' onClick={handleRecoverAccountSubmit}>
+								Recover
+							</Button>
 							<FormControl>
-								<FormHelperText>Remember password?</FormHelperText>
+								<FormHelperText sx={{ m: 1 }}>
+									Remember password?
+								</FormHelperText>
 								<Button
 									type='button'
 									onClick={() => handleFormChange('signIn')}
 								>
 									Sign In
 								</Button>
-								<FormHelperText>Need an account?</FormHelperText>
+								<FormHelperText sx={{ m: 1 }}>Need an account?</FormHelperText>
 								<Button
 									type='button'
 									onClick={() => handleFormChange('signUp')}
