@@ -17,14 +17,14 @@ const Account = () => {
 	const [keysData, setKeysData] = useState<APIKeyData[]>(defaultKeysDataValues);
 
 	const aggregateData = useCallback((data: APIKeyData[]) => {
-		const filledData = defaultKeysDataValues.map((data) => {
-			const userKeyData = data.find((d) => d.host === data.host);
+		const filledData = defaultKeysDataValues.map((defaults) => {
+			const userKeyData = data.find((d) => d.host === defaults.host);
 			if (userKeyData) {
-				for (const key in data) {
-					data[key] = userKeyData[key];
+				for (const key in defaults) {
+					defaults[key] = userKeyData[key];
 				}
 			}
-			return data;
+			return defaults;
 		});
 		setKeysData(filledData);
 	}, []);
