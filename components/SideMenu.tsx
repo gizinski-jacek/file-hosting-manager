@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { ThemeContext } from '../hooks/ThemeProvider';
 import { HostContext } from '../hooks/HostProvider';
 import { supportedHostList } from '../lib/defaults';
-
 import { styled, Theme, CSSObject } from '@mui/material/styles';
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
 import MuiDrawer from '@mui/material/Drawer';
@@ -31,7 +30,7 @@ import {
 	Logout,
 } from '@mui/icons-material';
 
-const drawerWidth = 160;
+const drawerWidth = 180;
 
 const openedMixin = (theme: Theme): CSSObject => ({
 	width: drawerWidth,
@@ -136,10 +135,7 @@ const MiniDrawer = () => {
 						aria-label='open drawer'
 						onClick={handleDrawerOpen}
 						edge='start'
-						sx={{
-							marginRight: 5,
-							...(open && { display: 'none' }),
-						}}
+						sx={{ marginRight: 5, ...(open && { display: 'none' }) }}
 					>
 						<MenuIcon />
 					</IconButton>
@@ -166,13 +162,13 @@ const MiniDrawer = () => {
 								sx={{
 									minHeight: 48,
 									justifyContent: open ? 'initial' : 'center',
-									px: 2,
+									px: 2.5,
 								}}
 							>
 								<ListItemIcon
 									sx={{
 										minWidth: 0,
-										mr: open ? 2 : 'auto',
+										mr: open ? 3 : 'auto',
 										justifyContent: 'center',
 									}}
 								>
@@ -192,13 +188,13 @@ const MiniDrawer = () => {
 								sx={{
 									minHeight: 48,
 									justifyContent: open ? 'initial' : 'center',
-									px: 2,
+									px: 2.5,
 								}}
 							>
 								<ListItemIcon
 									sx={{
 										minWidth: 0,
-										mr: open ? 2 : 'auto',
+										mr: open ? 3 : 'auto',
 										justifyContent: 'center',
 									}}
 								>
@@ -218,13 +214,13 @@ const MiniDrawer = () => {
 							sx={{
 								minHeight: 48,
 								justifyContent: open ? 'initial' : 'center',
-								px: 2,
+								px: 2.5,
 							}}
 						>
 							<ListItemIcon
 								sx={{
 									minWidth: 0,
-									mr: open ? 2 : 'auto',
+									mr: open ? 3 : 'auto',
 									justifyContent: 'center',
 								}}
 							>
@@ -241,14 +237,14 @@ const MiniDrawer = () => {
 							sx={{
 								minHeight: 48,
 								justifyContent: open ? 'initial' : 'center',
-								px: 2,
+								px: 2.5,
 							}}
 							onClick={handleThemeToggle}
 						>
 							<ListItemIcon
 								sx={{
 									minWidth: 0,
-									mr: open ? 2 : 'auto',
+									mr: open ? 3 : 'auto',
 									justifyContent: 'center',
 								}}
 							>
@@ -263,14 +259,14 @@ const MiniDrawer = () => {
 								sx={{
 									minHeight: 48,
 									justifyContent: open ? 'initial' : 'center',
-									px: 2,
+									px: 2.5,
 								}}
 								onClick={() => signOut({ callbackUrl: '/' })}
 							>
 								<ListItemIcon
 									sx={{
 										minWidth: 0,
-										mr: open ? 2 : 'auto',
+										mr: open ? 3 : 'auto',
 										justifyContent: 'center',
 									}}
 								>
@@ -294,14 +290,14 @@ const MiniDrawer = () => {
 										host == text.toLowerCase() ? 'lime' : 'white',
 									minHeight: 48,
 									justifyContent: open ? 'initial' : 'center',
-									px: 2,
+									px: 2.5,
 								}}
 								onClick={() => handleHostChange(text)}
 							>
 								<ListItemIcon
 									sx={{
 										minWidth: 0,
-										mr: open ? 2 : 'auto',
+										mr: open ? 3 : 'auto',
 										justifyContent: 'center',
 									}}
 								>
