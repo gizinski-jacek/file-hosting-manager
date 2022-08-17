@@ -1,3 +1,10 @@
+export const supportedHostList = [
+	'Gofile',
+	'Pixeldrain',
+	'Mixdrop',
+	'Anonfiles',
+];
+
 export const defaultSignInValues = {
 	username_or_email: '',
 	password: '',
