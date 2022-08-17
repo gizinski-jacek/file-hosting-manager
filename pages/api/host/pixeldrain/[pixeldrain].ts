@@ -109,16 +109,33 @@ export default async function handler(
 				// }
 			}
 			if (req.method === 'DELETE') {
-				// if (req.query.pixeldrain === 'delete-file') {
-				// 	const userAPIData = session.user.api_data.find(
-				// 		(d) => d.host === 'pixeldrain'
-				// 	);
-				// }
-				// if (req.query.pixeldrain === 'delete-folder') {
-				// 	const userAPIData = session.user.api_data.find(
-				// 		(d) => d.host === 'pixeldrain'
-				// 	);
-				// }
+				if (req.query.pixeldrain === 'delete-file') {
+					await connectMongo();
+					const user: MongoUserModel = await User.findById(session.user._id)
+						.select('+api_data')
+						.exec();
+					if (!user) {
+						return res.status(404).json('User not found');
+					}
+					const userAPIData = user.api_data.find(
+						(d) => d.host === 'pixeldrain'
+					);
+					if (!userAPIData) {
+						return res.status(404).json('No api data');
+					}
+					if (!userAPIData.api_key) {
+						return res.status(404).json('No api key');
+					}
+					await axios.delete(
+						`https://pixeldrain.com/api/file/${req.query.id}`,
+						{
+							headers: {
+								Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+							},
+						}
+					);
+					return res.status(200).json({ success: true });
+				}
 			}
 			return res.status(404).json('No endpoint');
 		} else if (req.cookies.tempUserToken) {
@@ -195,6 +212,7 @@ export default async function handler(
 			return res.status(404).json({ success: false });
 		}
 	} catch (error) {
+		console.log(error);
 		return res.status(404).json(error);
 	}
 }
