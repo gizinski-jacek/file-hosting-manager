@@ -3,9 +3,11 @@ import axios, { AxiosResponse } from 'axios';
 import {
 	Box,
 	Button,
+	Checkbox,
 	FormControl,
 	FormGroup,
 	FormHelperText,
+	FormLabel,
 	Grid,
 	Input,
 	InputLabel,
@@ -37,15 +39,17 @@ const Pixeldrain = () => {
 		host: 'pixeldrain',
 		api_key: '',
 	});
-	const [filesData, setFilesData] = useState<PixeldrainFile[]>();
-	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>();
+	const [filesData, setFilesData] = useState<PixeldrainFile[]>([]);
+	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>([]);
 	const [selectedFolder, setSelectedFolder] = useState('root');
 	const [openModal, setOpenModal] = useState(false);
 	const [createFolderInput, setCreateFolderInput] = useState('');
 	const [uploadData, setUploadData] = useState<File[]>([]);
 	const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+	const [checkedFiles, setCheckedFiles] = useState<string[]>([]);
 
 	const fileRef = useRef<HTMLInputElement>(null);
+	const checkboxRef = useRef<HTMLInputElement>(null);
 
 	const handleKeyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 		const { name, value } = e.target;
@@ -100,7 +104,7 @@ const Pixeldrain = () => {
 				if (selectedFolder === 'root') {
 					handleGetMainData();
 				} else {
-					const res: AxiosResponse = await axios.get(
+					const res = await axios.get(
 						`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`
 					);
 					setFilesData(res.data);
@@ -113,7 +117,7 @@ const Pixeldrain = () => {
 
 	const handleGetSingleFile = async (fileId: string, fileName: string) => {
 		try {
-			const res: AxiosResponse = await axios.get(
+			const res = await axios.get(
 				`/api/host/pixeldrain/get-single-file?id=${fileId}`,
 				{ responseType: 'blob' }
 			);
@@ -185,12 +189,13 @@ const Pixeldrain = () => {
 			uploadData.forEach((file, index) => {
 				uploadFormData.append('file_' + index, file);
 			});
-			const res: AxiosResponse = await axios.post(
+			const res = await axios.post(
 				`/api/host/pixeldrain/add-file`,
 				uploadFormData,
 				{ withCredentials: true }
 			);
 			if (res.status === 200) {
+				handleCloseModal();
 				handleGetFolderFilesData();
 			}
 		} catch (error) {
@@ -198,16 +203,38 @@ const Pixeldrain = () => {
 		}
 	};
 
-	const handleDeleteSingleFile = async (fileId: string) => {
-		try {
-			const res: AxiosResponse = await axios.delete(
-				`/api/host/pixeldrain/delete-file?id=${fileId}`,
-				{
-					withCredentials: true,
-				}
+	const toggleAllFilesCheckbox = () => {
+		if (filesData.length === 0) {
+			return;
+		}
+		if (checkedFiles.length === filesData.length) {
+			setCheckedFiles([]);
+		} else {
+			setCheckedFiles(filesData.map((file) => file.id));
+		}
+	};
+
+	const handleCheckboxToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
+		if (e.target.checked) {
+			setCheckedFiles((prevState) => [...prevState, e.target.value]);
+		} else {
+			setCheckedFiles((prevState) =>
+				prevState.filter((s) => s !== e.target.value)
 			);
+		}
+	};
+
+	const handleDeleteFiles = async () => {
+		try {
+			const res = await axios.delete('/api/host/pixeldrain/delete-files', {
+				data: checkedFiles,
+			});
 			if (res.status === 200) {
 				handleGetFolderFilesData();
+				if (!checkboxRef.current) {
+					return;
+				}
+				checkboxRef.current.checked = false;
 			}
 		} catch (error) {
 			console.log(error);
@@ -259,9 +286,7 @@ const Pixeldrain = () => {
 						<Refresh
 							sx={{ mx: 1, cursor: 'pointer' }}
 							onClick={handleGetFolderFilesData}
-						>
-							123
-						</Refresh>
+						/>
 						<FormControl sx={{ mx: 1 }}>
 							<InputLabel htmlFor='folder'>Change folder</InputLabel>
 							<select
@@ -270,7 +295,7 @@ const Pixeldrain = () => {
 								onChange={(e) => handleFolderChange(e)}
 							>
 								<option value='root'>root</option>
-								{foldersData?.map((folder) => {
+								{foldersData.map((folder) => {
 									return (
 										<option key={folder.id} value={folder.id}>
 											{folder.title}
@@ -282,6 +307,9 @@ const Pixeldrain = () => {
 						<Box sx={{ mx: 1 }}>
 							<Button type='button' onClick={handleOpenModal}>
 								Upload Files
+							</Button>
+							<Button type='button' onClick={handleDeleteFiles}>
+								Delete Selected Files
 							</Button>
 							<Modal open={openModal} onClose={handleCloseModal}>
 								<Box sx={style}>
@@ -311,7 +339,7 @@ const Pixeldrain = () => {
 											);
 										})}
 									</List>
-									<FormGroup>
+									<FormControl>
 										<FormControl>
 											<InputLabel htmlFor='create_folder'>
 												Add files to new folder?
@@ -345,13 +373,29 @@ const Pixeldrain = () => {
 										<Button type='button' onClick={handleUploadFiles}>
 											Upload Files
 										</Button>
-									</FormGroup>
+									</FormControl>
 								</Box>
 							</Modal>
 						</Box>
 					</Grid>
 					<div>
 						<Grid container p={2}>
+							<Grid item xs={1}>
+								<FormControl>
+									<FormGroup>
+										<Checkbox
+											ref={checkboxRef}
+											color='error'
+											size='small'
+											checked={
+												filesData.length === checkedFiles.length ? true : false
+											}
+											disabled={filesData.length === 0 ? true : false}
+											onChange={toggleAllFilesCheckbox}
+										/>
+									</FormGroup>
+								</FormControl>
+							</Grid>
 							<Grid item xs={7} textAlign='start'>
 								Name
 							</Grid>
@@ -369,13 +413,14 @@ const Pixeldrain = () => {
 							</Grid>
 						</Grid>
 						<Grid container>
-							{filesData?.map((file) => {
+							{filesData.map((file) => {
 								return (
 									<FileDataWrapper
 										key={file.id}
 										data={file}
 										getFile={handleGetSingleFile}
-										deleteFile={handleDeleteSingleFile}
+										checkboxState={checkedFiles.includes(file.id)}
+										handleCheckbox={handleCheckboxToggle}
 									/>
 								);
 							})}
@@ -383,8 +428,10 @@ const Pixeldrain = () => {
 					</div>
 				</div>
 			) : (
-				<FormGroup>
-					<h2>Pixeldrain credentials required</h2>
+				<FormControl>
+					<FormLabel>
+						<h2>Pixeldrain credentials required</h2>
+					</FormLabel>
 					<FormControl>
 						<InputLabel htmlFor='api_key'>Input your API key</InputLabel>
 						<Input
@@ -400,7 +447,7 @@ const Pixeldrain = () => {
 					<Button type='button' onClick={handleKeyFormSubmit}>
 						Submit
 					</Button>
-				</FormGroup>
+				</FormControl>
 			)}
 		</div>
 	);
