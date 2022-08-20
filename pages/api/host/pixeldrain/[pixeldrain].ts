@@ -7,6 +7,14 @@ import { MongoUserModel, TempUserToken } from '../../../../lib/types/types';
 import User from '../../../../models/user';
 import { nextAuthOptions } from '../../auth/[...nextauth]';
 import jwt from 'jsonwebtoken';
+import formidable from 'formidable-serverless';
+
+export const config = {
+	api: {
+		bodyParser: false,
+		externalResolver: true,
+	},
+};
 
 export default async function handler(
 	req: NextApiRequest,
@@ -85,28 +93,70 @@ export default async function handler(
 				}
 			}
 			if (req.method === 'POST') {
-				// if (req.query.pixeldrain === 'add-file') {
-				// 	const userAPIData = session.user.api_data.find(
-				// 		(d) => d.host === 'pixeldrain'
-				// 	);
-				// }
-				// if (req.query.pixeldrain === 'add-folder') {
-				// 	const userAPIData = session.user.api_data.find(
-				// 		(d) => d.host === 'pixeldrain'
-				// 	);
-				// }
-			}
-			if (req.method === 'PUT') {
-				// if (req.query.pixeldrain === 'update-file') {
-				// 	const userAPIData = session.user.api_data.find(
-				// 		(d) => d.host === 'pixeldrain'
-				// 	);
-				// }
-				// if (req.query.pixeldrain === 'update-folder') {
-				// 	const userAPIData = session.user.api_data.find(
-				// 		(d) => d.host === 'pixeldrain'
-				// 	);
-				// }
+				if (req.query.pixeldrain === 'add-file') {
+					const form = new formidable.IncomingForm();
+					form.parse(
+						req,
+						async (
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								return res.status(404).json(error);
+							}
+							await connectMongo();
+							const user: MongoUserModel = await User.findById(session.user._id)
+								.select('+api_data')
+								.exec();
+							if (!user) {
+								return res.status(404).json('User not found');
+							}
+							const userAPIData = user.api_data.find(
+								(d) => d.host === 'pixeldrain'
+							);
+							if (!userAPIData) {
+								return res.status(404).json('No api data');
+							}
+							if (!userAPIData.api_key) {
+								return res.status(404).json('No api key');
+							}
+							const filesArray = [];
+							for (const [key, file] of Object.entries(filesData)) {
+								filesArray.push(file);
+							}
+							const promiseArray = filesArray.map((file) =>
+								axios.put(
+									`https://pixeldrain.com/api/file/${file.name}`,
+									{ file: file },
+									{
+										headers: {
+											Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+										},
+									}
+								)
+							);
+							const resFiles = await Promise.all(promiseArray);
+							if (fieldsData.folder) {
+								const filesIdArray = resFiles.map((r) => r.data);
+								await axios.post(
+									'https://pixeldrain.com/api/list',
+									{
+										title: fieldsData.folder,
+										anonymouse: false,
+										files: filesIdArray,
+									},
+									{
+										headers: {
+											Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+										},
+									}
+								);
+							}
+							return res.status(200).json({ success: true });
+						}
+					);
+				}
 			}
 			if (req.method === 'DELETE') {
 				if (req.query.pixeldrain === 'delete-file') {
@@ -137,7 +187,6 @@ export default async function handler(
 					return res.status(200).json({ success: true });
 				}
 			}
-			return res.status(404).json('No endpoint');
 		} else if (req.cookies.tempUserToken) {
 			if (req.method === 'GET') {
 				if (req.query.pixeldrain === 'get-user-files') {
@@ -212,7 +261,6 @@ export default async function handler(
 			return res.status(404).json({ success: false });
 		}
 	} catch (error) {
-		console.log(error);
-		return res.status(404).json(error);
+		return res.status(404).json(error.data);
 	}
 }
