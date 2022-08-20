@@ -17,7 +17,6 @@ const ThemeContext = createContext<ThemeProps>({
 
 const ThemeContextProvider = ({ children }: Props) => {
 	const [theme, setTheme] = useLocalStorage<'dark' | 'light'>('theme', 'light');
-	console.log(theme);
 	const toggleTheme = () => {
 		const newTheme = theme === 'light' ? 'dark' : 'light';
 		setTheme(newTheme);
