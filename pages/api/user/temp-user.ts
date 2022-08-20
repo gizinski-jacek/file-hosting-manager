@@ -44,7 +44,6 @@ export default async function handler(
 				return res.status(200).json({ success: true });
 			}
 		}
-		return res.status(404).json('No endpoint');
 	} catch (error) {
 		return res.status(404).json(error);
 	}

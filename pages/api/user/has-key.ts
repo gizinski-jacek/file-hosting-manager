@@ -30,7 +30,6 @@ export default async function handler(
 					return res.status(200).json(true);
 				}
 			}
-			return res.status(404).json('No endpoint');
 		} else if (req.cookies.tempUserToken) {
 			if (!process.env.JWT_STRATEGY_SECRET) {
 				return res.status(404).json('Server error');
