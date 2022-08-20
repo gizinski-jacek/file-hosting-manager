@@ -146,9 +146,9 @@ const Home: NextPage = () => {
 									required
 								/>
 							</FormControl>
-							{signInFormError?.map((e, index) => (
+							{signInFormError.map((message, index) => (
 								<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
-									{e}
+									{message}
 								</FormHelperText>
 							))}
 							{signInFormError.length > 0 ? (
@@ -236,9 +236,9 @@ const Home: NextPage = () => {
 									required
 								/>
 							</FormControl>
-							{signUpFormError?.map((e, index) => (
+							{signUpFormError.map((message, index) => (
 								<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
-									{e}
+									{message}
 								</FormHelperText>
 							))}
 							<Button type='button' onClick={handleSignUpSubmit}>
@@ -283,9 +283,9 @@ const Home: NextPage = () => {
 									required
 								/>
 							</FormControl>
-							{recoverAccountError?.map((e, index) => (
+							{recoverAccountError.map((message, index) => (
 								<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
-									{e}
+									{message}
 								</FormHelperText>
 							))}
 							<Button type='button' onClick={handleRecoverAccountSubmit}>
