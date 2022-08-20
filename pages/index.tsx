@@ -3,13 +3,12 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import { useSession } from 'next-auth/react';
 import { signIn } from 'next-auth/react';
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 import {
-	Box,
 	Button,
 	FormControl,
-	FormGroup,
 	FormHelperText,
+	FormLabel,
 	Input,
 	InputLabel,
 } from '@mui/material';
@@ -114,10 +113,10 @@ const Home: NextPage = () => {
 			{user ? null : (
 				<div>
 					{showForm === 'signIn' ? (
-						<FormGroup>
-							<Box sx={{ my: 1 }}>
+						<FormControl>
+							<FormLabel sx={{ my: 1 }}>
 								<h2>Sign In</h2>
-							</Box>
+							</FormLabel>
 							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='username_or_email'>
 									Username or Email
@@ -166,12 +165,12 @@ const Home: NextPage = () => {
 							<Button type='button' onClick={() => handleFormChange('signUp')}>
 								Sign Up
 							</Button>
-						</FormGroup>
+						</FormControl>
 					) : showForm === 'signUp' ? (
-						<FormGroup>
-							<Box sx={{ my: 1 }}>
+						<FormControl>
+							<FormLabel sx={{ my: 1 }}>
 								<h2>Sign Up</h2>
-							</Box>
+							</FormLabel>
 							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='email'>Email</InputLabel>
 								<Input
@@ -262,12 +261,12 @@ const Home: NextPage = () => {
 									Sign In
 								</Button>
 							</FormControl>
-						</FormGroup>
+						</FormControl>
 					) : showForm === 'recoverAccount' ? (
-						<FormGroup>
-							<Box sx={{ my: 1 }}>
+						<FormControl>
+							<FormLabel sx={{ my: 1 }}>
 								<h2>Recover Account</h2>
-							</Box>
+							</FormLabel>
 							<FormControl sx={{ m: 1 }}>
 								<InputLabel htmlFor='username_or_email'>
 									Username or Email
@@ -309,7 +308,7 @@ const Home: NextPage = () => {
 									Sign Up
 								</Button>
 							</FormControl>
-						</FormGroup>
+						</FormControl>
 					) : null}
 				</div>
 			)}
