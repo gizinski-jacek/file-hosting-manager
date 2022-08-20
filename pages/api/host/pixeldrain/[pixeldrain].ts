@@ -159,32 +159,49 @@ export default async function handler(
 				}
 			}
 			if (req.method === 'DELETE') {
-				if (req.query.pixeldrain === 'delete-file') {
-					await connectMongo();
-					const user: MongoUserModel = await User.findById(session.user._id)
-						.select('+api_data')
-						.exec();
-					if (!user) {
-						return res.status(404).json('User not found');
-					}
-					const userAPIData = user.api_data.find(
-						(d) => d.host === 'pixeldrain'
-					);
-					if (!userAPIData) {
-						return res.status(404).json('No api data');
-					}
-					if (!userAPIData.api_key) {
-						return res.status(404).json('No api key');
-					}
-					await axios.delete(
-						`https://pixeldrain.com/api/file/${req.query.id}`,
-						{
-							headers: {
-								Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
-							},
+				if (req.query.pixeldrain === 'delete-files') {
+					const form = new formidable.IncomingForm();
+					form.parse(
+						req,
+						async (
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								return res.status(404).json(error);
+							}
+							await connectMongo();
+							const user: MongoUserModel = await User.findById(session.user._id)
+								.select('+api_data')
+								.exec();
+							if (!user) {
+								return res.status(404).json('User not found');
+							}
+							const userAPIData = user.api_data.find(
+								(d) => d.host === 'pixeldrain'
+							);
+							if (!userAPIData) {
+								return res.status(404).json('No api data');
+							}
+							if (!userAPIData.api_key) {
+								return res.status(404).json('No api key');
+							}
+							const idArray = [];
+							for (const [key, id] of Object.entries(fieldsData)) {
+								idArray.push(id);
+							}
+							const promiseArray = idArray.map((id) =>
+								axios.delete(`https://pixeldrain.com/api/file/${id}`, {
+									headers: {
+										Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+									},
+								})
+							);
+							await Promise.all(promiseArray);
+							return res.status(200).json({ success: true });
 						}
 					);
-					return res.status(200).json({ success: true });
 				}
 			}
 		} else if (req.cookies.tempUserToken) {
