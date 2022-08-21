@@ -29,6 +29,7 @@ import {
 	Login,
 	Logout,
 } from '@mui/icons-material';
+import Footer from './Footer';
 
 const drawerWidth = 180;
 
@@ -141,7 +142,9 @@ const MiniDrawer = () => {
 					</IconButton>
 					<Box sx={{ ml: 'auto' }}>
 						<Link href='/'>
-							<Typography variant='h4'>File Hosting Manager</Typography>
+							<Typography variant='h4'>
+								<Link href='/'>File Hosting Manager</Link>
+							</Typography>
 						</Link>
 					</Box>
 				</Toolbar>
@@ -308,6 +311,7 @@ const MiniDrawer = () => {
 						</ListItem>
 					))}
 				</List>
+				<Footer />
 			</Drawer>
 		</Box>
 	);
