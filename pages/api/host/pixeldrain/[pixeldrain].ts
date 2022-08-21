@@ -105,6 +105,15 @@ export default async function handler(
 							if (error) {
 								return res.status(404).json(error);
 							}
+							if (!fieldsData && !filesData) {
+								return res.status(200).json({ success: false });
+							}
+							if (
+								Object.keys(fieldsData).length === 0 &&
+								Object.keys(filesData).length === 0
+							) {
+								return res.status(200).json({ success: false });
+							}
 							await connectMongo();
 							const user: MongoUserModel = await User.findById(session.user._id)
 								.select('+api_data')
@@ -170,6 +179,15 @@ export default async function handler(
 						) => {
 							if (error) {
 								return res.status(404).json(error);
+							}
+							if (!fieldsData && !filesData) {
+								return res.status(200).json({ success: false });
+							}
+							if (
+								Object.keys(fieldsData).length === 0 &&
+								Object.keys(filesData).length === 0
+							) {
+								return res.status(200).json({ success: false });
 							}
 							await connectMongo();
 							const user: MongoUserModel = await User.findById(session.user._id)
