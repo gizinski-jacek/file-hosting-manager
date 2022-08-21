@@ -462,26 +462,28 @@ const Pixeldrain = () => {
 					</>
 				</>
 			) : (
-				<FormControl>
-					<FormLabel>
-						<h2>Pixeldrain credentials required</h2>
-					</FormLabel>
+				<Box sx={{ p: 5, textAlign: 'center' }}>
 					<FormControl>
-						<InputLabel htmlFor='api_key'>Input your API key</InputLabel>
-						<Input
-							id='api_key'
-							name='api_key'
-							inputProps={{ minLength: 4, maxLength: 64 }}
-							value={formData.api_key}
-							onChange={handleKeyInputChange}
-							required
-							placeholder='API key'
-						/>
+						<FormLabel sx={{ my: 1 }}>
+							<h2>Pixeldrain credentials required</h2>
+						</FormLabel>
+						<FormControl sx={{ my: 1 }}>
+							<InputLabel htmlFor='api_key'>Input your API key</InputLabel>
+							<Input
+								id='api_key'
+								name='api_key'
+								inputProps={{ minLength: 4, maxLength: 64 }}
+								value={formData.api_key}
+								onChange={handleKeyInputChange}
+								required
+								placeholder='API key'
+							/>
+						</FormControl>
+						<Button type='button' onClick={handleKeyFormSubmit}>
+							Submit
+						</Button>
 					</FormControl>
-					<Button type='button' onClick={handleKeyFormSubmit}>
-						Submit
-					</Button>
-				</FormControl>
+				</Box>
 			)}
 		</>
 	);
