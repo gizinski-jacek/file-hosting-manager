@@ -16,15 +16,13 @@ const Layout = ({ children, session }: Props) => {
 		<SessionProvider session={session}>
 			<HostContextProvider>
 				<ThemeContextProvider>
-					<div className={styles.container}>
-						<Head>
-							<title>File Hosting Manager</title>
-							<meta name='description' content='File Hosting Manager' />
-							<link rel='icon' href='/favicon.ico' />
-						</Head>
-						<Nav />
-						<main className={styles.main}>{children}</main>
-					</div>
+					<Head>
+						<title>File Hosting Manager</title>
+						<meta name='description' content='File Hosting Manager' />
+						<link rel='icon' href='/favicon.ico' />
+					</Head>
+					<Nav />
+					<main className={styles.main}>{children}</main>
 				</ThemeContextProvider>
 			</HostContextProvider>
 		</SessionProvider>
