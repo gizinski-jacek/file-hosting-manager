@@ -1,8 +1,7 @@
-import { SessionProvider } from 'next-auth/react';
+import { getSession, GetSessionParams, SessionProvider } from 'next-auth/react';
 import { Session } from 'next-auth';
 import Head from 'next/head';
 import Nav from './Nav';
-import Footer from './Footer';
 import styles from '../styles/Layout.module.scss';
 import { HostContextProvider } from '../hooks/HostProvider';
 import { ThemeContextProvider } from '../hooks/ThemeProvider';
@@ -25,12 +24,19 @@ const Layout = ({ children, session }: Props) => {
 						</Head>
 						<Nav />
 						<main className={styles.main}>{children}</main>
-						<Footer />
 					</div>
 				</ThemeContextProvider>
 			</HostContextProvider>
 		</SessionProvider>
 	);
+};
+
+export const getServerSideProps = async (context: GetSessionParams) => {
+	return {
+		props: {
+			session: await getSession(context),
+		},
+	};
 };
 
 export default Layout;
