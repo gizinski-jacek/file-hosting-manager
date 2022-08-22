@@ -57,7 +57,7 @@ export default async function handler(
 						.select('-_id api_data')
 						.exec();
 					if (!updatedUser) {
-						return res.status(404).json('Failed to update user');
+						return res.status(404).json('Error updating user');
 					}
 					return res.status(200).json(updatedUser.api_data);
 				}
