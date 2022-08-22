@@ -33,11 +33,6 @@ export interface TempUserToken extends JwtPayload {
 	}[];
 }
 
-export interface APIFormData {
-	api_key: string;
-	[key: string]: string;
-}
-
 export interface PixeldrainFile {
 	id: string;
 	name: string;
@@ -50,7 +45,12 @@ export interface PixeldrainFile {
 export interface APIKeyData {
 	host: string;
 	api_key: string;
-	[key: string]: string;
+	email?: string;
+}
+
+export interface APIKeyExists {
+	host: string;
+	has_key: boolean;
 }
 
 export interface SignInData {
