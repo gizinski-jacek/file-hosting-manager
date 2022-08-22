@@ -8,7 +8,6 @@ import {
 	FormControl,
 	FormGroup,
 	FormHelperText,
-	FormLabel,
 	Grid,
 	Input,
 	InputLabel,
@@ -19,8 +18,7 @@ import {
 	SelectChangeEvent,
 } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
-import { APIFormData, PixeldrainFile } from '../../lib/types/types';
-import { useSession } from 'next-auth/react';
+import { PixeldrainFile } from '../../lib/types/types';
 import FileDataWrapper from '../../lib/wrappers/FileDataWrapper';
 
 const style = {
@@ -28,20 +26,17 @@ const style = {
 	top: '50%',
 	left: '50%',
 	transform: 'translate(-50%, -50%)',
-	width: 400,
+	width: 500,
+	height: 500,
 	bgcolor: 'white',
 	border: '2px solid #000',
 	boxShadow: 24,
 	p: 4,
+	display: 'flex',
+	flexDirection: 'column',
 };
 
 const Pixeldrain = () => {
-	const { data: user } = useSession();
-	const [userHasAPIKey, setUserHasAPIKey] = useState(false);
-	const [formData, setFormData] = useState<APIFormData>({
-		host: 'pixeldrain',
-		api_key: '',
-	});
 	const [filesData, setFilesData] = useState<PixeldrainFile[]>([]);
 	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>([]);
 	const [selectedFolder, setSelectedFolder] = useState('root');
@@ -54,36 +49,6 @@ const Pixeldrain = () => {
 
 	const fileRef = useRef<HTMLInputElement>(null);
 	const checkboxRef = useRef<HTMLInputElement>(null);
-
-	const handleKeyInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		const { name, value } = e.target;
-		setFormData((prevState) => ({
-			...prevState,
-			[name]: value,
-		}));
-	};
-
-	const handleKeyFormSubmit = async () => {
-		try {
-			if (user) {
-				const res = await axios.put('/api/user/account-data', formData, {
-					withCredentials: true,
-				});
-				if (res.status === 200) {
-					setUserHasAPIKey(true);
-				}
-			} else {
-				const res = await axios.post('/api/user/temp-user', formData, {
-					withCredentials: true,
-				});
-				if (res.status === 200) {
-					setUserHasAPIKey(true);
-				}
-			}
-		} catch (error) {
-			console.log(error);
-		}
-	};
 
 	const handleGetMainData = async () => {
 		try {
@@ -106,22 +71,20 @@ const Pixeldrain = () => {
 
 	const handleGetFolderFilesData = useCallback(async () => {
 		try {
-			if (userHasAPIKey) {
-				if (selectedFolder === 'root') {
-					handleGetMainData();
-				} else {
-					setFetching(true);
-					const res = await axios.get(
-						`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`
-					);
-					setFilesData(res.data);
-					setFetching(false);
-				}
+			if (selectedFolder === 'root') {
+				handleGetMainData();
+			} else {
+				setFetching(true);
+				const res = await axios.get(
+					`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`
+				);
+				setFilesData(res.data);
+				setFetching(false);
 			}
 		} catch (error) {
 			console.log(error);
 		}
-	}, [selectedFolder, userHasAPIKey]);
+	}, [selectedFolder]);
 
 	const handleGetSingleFile = async (fileId: string, fileName: string) => {
 		try {
@@ -272,23 +235,8 @@ const Pixeldrain = () => {
 	};
 
 	useEffect(() => {
-		(async () => {
-			try {
-				const res = await axios.get('/api/user/has-key?host=pixeldrain', {
-					withCredentials: true,
-				});
-				setUserHasAPIKey(res.data);
-			} catch (error) {
-				console.log(error);
-			}
-		})();
+		handleGetMainData();
 	}, []);
-
-	useEffect(() => {
-		if (userHasAPIKey) {
-			handleGetMainData();
-		}
-	}, [userHasAPIKey]);
 
 	useEffect(() => {
 		handleGetFolderFilesData();
@@ -296,204 +244,157 @@ const Pixeldrain = () => {
 
 	return (
 		<>
-			{userHasAPIKey ? (
-				<>
-					<Grid container sx={{ p: 2, alignItems: 'center' }}>
-						<Grid item xs={'auto'} p={1}>
-							{fetching ? (
-								<CircularProgress size={24} />
-							) : (
-								<Refresh
-									sx={{ cursor: 'pointer' }}
-									onClick={handleGetFolderFilesData}
-								/>
-							)}
-						</Grid>
-						<Grid item xs={'auto'}>
-							<FormControl sx={{ mx: 1, display: 'flex' }}>
-								<InputLabel htmlFor='folder'>Folder</InputLabel>
-								<Select
-									native={true}
-									id='folder'
-									value={selectedFolder}
-									label='Folder'
-									onChange={(e) => handleFolderChange(e)}
-								>
-									<option value='root'>root</option>
-									{foldersData.map((folder) => {
-										return (
-											<option key={folder.id} value={folder.id}>
-												{folder.title}
-											</option>
-										);
-									})}
-								</Select>
-							</FormControl>
-						</Grid>
-						<Grid item xs={'auto'}>
-							<Box sx={{ mx: 1 }}>
-								<Button type='button' onClick={handleOpenModal}>
-									Upload Files
-								</Button>
-								<Button type='button' onClick={handleDeleteFiles}>
-									Delete Selected Files
-								</Button>
-								<Modal open={openModal} onClose={handleCloseModal}>
-									<Box sx={style}>
-										<Box
-											sx={{ display: 'flex', justifyContent: 'space-between' }}
-										>
-											<Button type='button' onClick={clickSelectFiles}>
-												Add Files
-											</Button>
-											<Button type='button' onClick={handleClearFileList}>
-												Clear List
-											</Button>
-										</Box>
-										<List>
-											{uploadData.map((file, index) => {
-												return (
-													<ListItem disablePadding key={file.name + index}>
-														{file.name}
-														<Button
-															type='button'
-															sx={{ ml: 'auto' }}
-															onClick={() => handleRemoveSingleFile(file.name)}
-														>
-															X
-														</Button>
-													</ListItem>
-												);
-											})}
-										</List>
-										<FormControl>
-											<FormControl>
-												<InputLabel htmlFor='create_folder'>
-													Add files to new folder?
-												</InputLabel>
-												<Input
-													id='create_folder'
-													name='create_folder'
-													type='text'
-													value={createFolderInput}
-													onChange={(e) => handleFolderInputChange(e)}
-													placeholder='Folder name'
-												/>
-											</FormControl>
-											<FormControl sx={{ display: 'none' }}>
-												<label htmlFor='upload_files'>Add files</label>
-												<input
-													ref={fileRef}
-													id='upload_files'
-													name='upload_files'
-													type='file'
-													multiple
-													onChange={handleFileChange}
-													required
-												/>
-											</FormControl>
-											{uploadErrors.map((message, index) => (
-												<FormHelperText
-													sx={{ mx: 1, color: 'red' }}
-													key={index}
-												>
-													{message}
-												</FormHelperText>
-											))}
-											<Button type='button' onClick={handleUploadFiles}>
-												Upload Files
-											</Button>
-										</FormControl>
-									</Box>
-								</Modal>
-							</Box>
-						</Grid>
-					</Grid>
-					<>
-						<Grid container sx={{ p: 2, alignItems: 'center' }}>
-							<Grid item xs={'auto'}>
-								<FormControl>
-									<FormGroup>
-										<Checkbox
-											ref={checkboxRef}
-											color='error'
-											size='small'
-											checked={
-												filesData.length > 0 &&
-												filesData.length === checkedFiles.length
-													? true
-													: false
-											}
-											disabled={filesData.length === 0 ? true : false}
-											onChange={toggleAllFilesCheckbox}
-										/>
-									</FormGroup>
-								</FormControl>
-							</Grid>
-							<Grid item xs={true} sx={{ px: 1, textAlign: 'start' }}>
-								Name
-							</Grid>
-							<Grid item xs={2} sx={{ px: 1, textAlign: 'end' }}>
-								Upload date
-							</Grid>
-							<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
-								Size
-							</Grid>
-							<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
-								Downloads
-							</Grid>
-							<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
-								Views
-							</Grid>
-						</Grid>
-						<Grid container>
-							{filesData.map((file) => {
-								return (
-									<FileDataWrapper
-										key={file.id}
-										data={file}
-										getFile={handleGetSingleFile}
-										checkboxState={checkedFiles.includes(file.id)}
-										handleCheckbox={handleCheckboxToggle}
-									/>
-								);
-							})}
-						</Grid>
-					</>
-				</>
-			) : (
-				<Box sx={{ p: 5, textAlign: 'center' }}>
-					<FormControl>
-						<FormLabel sx={{ my: 1 }}>
-							<h2>Pixeldrain credentials required</h2>
-						</FormLabel>
-						<FormControl sx={{ my: 1 }}>
-							<InputLabel htmlFor='api_key'>Input your API key</InputLabel>
-							<Input
-								id='api_key'
-								name='api_key'
-								inputProps={{ minLength: 4, maxLength: 64 }}
-								value={formData.api_key}
-								onChange={handleKeyInputChange}
-								required
-								placeholder='API key'
-							/>
-						</FormControl>
-						<Button type='button' onClick={handleKeyFormSubmit}>
-							Submit
-						</Button>
+			<Grid container sx={{ p: 2, alignItems: 'center' }}>
+				<Grid item xs={'auto'} p={1}>
+					{fetching ? (
+						<CircularProgress size={24} />
+					) : (
+						<Refresh
+							sx={{ cursor: 'pointer' }}
+							onClick={handleGetFolderFilesData}
+						/>
+					)}
+				</Grid>
+				<Grid item xs={'auto'}>
+					<FormControl sx={{ mx: 1, display: 'flex' }} size='small'>
+						<InputLabel htmlFor='folder'>Folder</InputLabel>
+						<Select
+							native={true}
+							id='folder'
+							value={selectedFolder}
+							label='Folder'
+							onChange={(e) => handleFolderChange(e)}
+						>
+							<option value='root'>root</option>
+							{foldersData.map((folder) => (
+								<option key={folder.id} value={folder.id}>
+									{folder.title}
+								</option>
+							))}
+						</Select>
 					</FormControl>
-				</Box>
-			)}
+				</Grid>
+				<Grid item xs={'auto'}>
+					<Box sx={{ mx: 1 }}>
+						<Button type='button' onClick={handleOpenModal}>
+							Upload Files
+						</Button>
+						<Button type='button' onClick={handleDeleteFiles}>
+							Delete Selected Files
+						</Button>
+						<Modal open={openModal} onClose={handleCloseModal}>
+							<Box sx={style}>
+								<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+									<Button type='button' onClick={clickSelectFiles}>
+										Add Files
+									</Button>
+									<Button type='button' onClick={handleClearFileList}>
+										Clear List
+									</Button>
+								</Box>
+								<List sx={{ flex: 1, overflow: 'auto' }}>
+									{uploadData.map((file, index) => (
+										<ListItem disablePadding key={file.name + index}>
+											{file.name}
+											<Button
+												type='button'
+												sx={{ ml: 'auto' }}
+												onClick={() => handleRemoveSingleFile(file.name)}
+											>
+												X
+											</Button>
+										</ListItem>
+									))}
+								</List>
+								<FormControl>
+									<FormControl sx={{ display: 'none' }}>
+										<InputLabel htmlFor='upload_files'>Add files</InputLabel>
+										<input
+											ref={fileRef}
+											id='upload_files'
+											name='upload_files'
+											type='file'
+											multiple
+											onChange={handleFileChange}
+											required
+										/>
+									</FormControl>
+									<FormControl sx={{ my: 1 }}>
+										<InputLabel htmlFor='create_folder'>
+											Add files to new folder?
+										</InputLabel>
+										<Input
+											id='create_folder'
+											name='create_folder'
+											type='text'
+											value={createFolderInput}
+											onChange={(e) => handleFolderInputChange(e)}
+											placeholder='Folder name'
+										/>
+									</FormControl>
+									{uploadErrors.map((message, index) => (
+										<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
+											{message}
+										</FormHelperText>
+									))}
+									<Button type='button' onClick={handleUploadFiles}>
+										Upload Files
+									</Button>
+								</FormControl>
+							</Box>
+						</Modal>
+					</Box>
+				</Grid>
+			</Grid>
+			<Grid container sx={{ p: 2, alignItems: 'center' }}>
+				<Grid item xs={'auto'}>
+					<FormControl>
+						<FormGroup>
+							<Checkbox
+								ref={checkboxRef}
+								color='error'
+								size='small'
+								checked={
+									filesData.length > 0 &&
+									filesData.length === checkedFiles.length
+										? true
+										: false
+								}
+								disabled={filesData.length === 0 ? true : false}
+								onChange={toggleAllFilesCheckbox}
+							/>
+						</FormGroup>
+					</FormControl>
+				</Grid>
+				<Grid item xs={true} sx={{ px: 1, textAlign: 'start' }}>
+					Name
+				</Grid>
+				<Grid item xs={2} sx={{ px: 1, textAlign: 'end' }}>
+					Upload date
+				</Grid>
+				<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
+					Size
+				</Grid>
+				<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
+					Downloads
+				</Grid>
+				<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
+					Views
+				</Grid>
+			</Grid>
+			<Grid container>
+				{filesData.map((file) => (
+					<FileDataWrapper
+						key={file.id}
+						data={file}
+						getFile={handleGetSingleFile}
+						checkboxState={checkedFiles.includes(file.id)}
+						handleCheckbox={handleCheckboxToggle}
+					/>
+				))}
+			</Grid>
 		</>
 	);
-};
-
-export const getServerSideProps = async ({ req, res }) => {
-	console.log(1234);
-	return {
-		props: {}, // will be passed to the page component as props
-	};
 };
 
 export default Pixeldrain;
