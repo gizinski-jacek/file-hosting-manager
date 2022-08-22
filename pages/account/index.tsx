@@ -2,19 +2,15 @@ import { useCallback, useEffect, useState } from 'react';
 import { useSession } from 'next-auth/react';
 import axios from 'axios';
 import { APIKeyData } from '../../lib/types/types';
-import {
-	Button,
-	FormControl,
-	FormGroup,
-	Input,
-	InputLabel,
-} from '@mui/material';
+import { Button, FormControl, Input, InputLabel } from '@mui/material';
 import { Box } from '@mui/system';
 import { defaultKeysDataValues } from '../../lib/defaults';
+import { useRouter } from 'next/router';
 
 const Account = () => {
 	const { data: user } = useSession();
 	const [keysData, setKeysData] = useState<APIKeyData[]>(defaultKeysDataValues);
+	const router = useRouter();
 
 	const aggregateData = useCallback((data: APIKeyData[]) => {
 		const filledData = [];
@@ -86,35 +82,16 @@ const Account = () => {
 
 	useEffect(() => {
 		getUserKeysData();
-	}, [user, getUserKeysData]);
+		// if (user) {
+		// 	getUserKeysData();
+		// } else {
+		// 	router.push('/');
+		// }
+	}, [user, getUserKeysData, router]);
 
-	return keysData.map((data, index) => {
-		const renderArray = [];
-		for (const [key, value] of Object.entries(data)) {
-			if (key !== 'host') {
-				renderArray.push(
-					<FormControl key={key + index}>
-						<InputLabel key={key + 'label'} htmlFor={key}>
-							{data.host.charAt(0).toUpperCase() + data.host.slice(1)}{' '}
-							{key.replace('_', ' ')}:
-						</InputLabel>
-						<Input
-							sx={{ m: 2 }}
-							key={key + 'input'}
-							id={data.host + '__' + key}
-							name={key}
-							type={key === 'email' ? 'email' : 'text'}
-							inputProps={{ minLength: 4, maxLength: 32 }}
-							value={value}
-							onChange={(e) => handleChangeUserAPIKey(e, data.host)}
-							placeholder={`${value} ${key.replace('_', ' ')}`}
-						/>
-					</FormControl>
-				);
-			}
-		}
+	return keysData.map((data, i) => {
 		return (
-			<FormGroup sx={{ width: '500px' }} key={index}>
+			<FormControl sx={{ width: '500px' }} key={i}>
 				<Box
 					sx={{
 						my: 1,
@@ -126,17 +103,40 @@ const Account = () => {
 					<h3>
 						{data.host.charAt(0).toUpperCase() + data.host.slice(1)} credentials
 					</h3>
-					<div>
+					<Box>
 						<Button type='button' onClick={() => handleFormSubmit(data.host)}>
 							Save
 						</Button>
 						<Button type='button' onClick={() => handleDataDelete(data.host)}>
 							Delete
 						</Button>
-					</div>
+					</Box>
 				</Box>
-				{renderArray}
-			</FormGroup>
+				{Object.entries(data).map(([key, value], index) => {
+					if (key === 'host') {
+						return;
+					}
+					return (
+						<FormControl key={key + index}>
+							<InputLabel key={key + 'label'} htmlFor={key}>
+								{data.host.charAt(0).toUpperCase() + data.host.slice(1)}{' '}
+								{key.replace('_', ' ')}:
+							</InputLabel>
+							<Input
+								sx={{ m: 2 }}
+								key={key + 'input'}
+								id={data.host + '__' + key}
+								name={key}
+								type={key === 'email' ? 'email' : 'text'}
+								inputProps={{ minLength: 4, maxLength: 32 }}
+								value={value}
+								onChange={(e) => handleChangeUserAPIKey(e, data.host)}
+								placeholder={`${value} ${key.replace('_', ' ')}`}
+							/>
+						</FormControl>
+					);
+				})}
+			</FormControl>
 		);
 	});
 };
