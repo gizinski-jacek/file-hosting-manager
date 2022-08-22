@@ -8,7 +8,7 @@ export default async function handler(
 	res: NextApiResponse
 ) {
 	try {
-		if (req.method === 'POST') {
+		if (req.method === 'PUT') {
 			if (req.cookies.tempUserToken) {
 				if (!process.env.JWT_STRATEGY_SECRET) {
 					return res.status(404).json('Server error');
