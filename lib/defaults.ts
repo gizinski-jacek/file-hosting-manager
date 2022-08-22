@@ -1,8 +1,8 @@
 export const supportedHostList = [
-	'Gofile',
-	'Pixeldrain',
-	'Mixdrop',
-	'Anonfiles',
+	'gofile',
+	'pixeldrain',
+	'mixdrop',
+	'anonfiles',
 ];
 
 export const defaultSignInValues = {
