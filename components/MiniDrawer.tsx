@@ -289,8 +289,7 @@ const MiniDrawer = () => {
 						<ListItem key={text} disablePadding sx={{ display: 'block' }}>
 							<ListItemButton
 								sx={{
-									backgroundColor:
-										host == text.toLowerCase() ? 'lime' : 'white',
+									backgroundColor: host == text ? 'lime' : 'white',
 									minHeight: 48,
 									justifyContent: open ? 'initial' : 'center',
 									px: 2.5,
@@ -306,7 +305,10 @@ const MiniDrawer = () => {
 								>
 									icon
 								</ListItemIcon>
-								<ListItemText primary={text} sx={{ opacity: open ? 1 : 0 }} />
+								<ListItemText
+									primary={text.charAt(0).toUpperCase() + text.slice(1)}
+									sx={{ opacity: open ? 1 : 0 }}
+								/>
 							</ListItemButton>
 						</ListItem>
 					))}
