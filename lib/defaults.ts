@@ -1,9 +1,4 @@
-export const supportedHostList = [
-	'gofile',
-	'pixeldrain',
-	'mixdrop',
-	'anonfiles',
-];
+export const supportedHostList = ['pixeldrain', 'mixdrop'];
 
 export const defaultSignInValues = {
 	username_or_email: '',
@@ -19,10 +14,6 @@ export const defaultSignUpValues = {
 
 export const defaultKeysDataValues = [
 	{
-		host: 'gofile',
-		api_key: '',
-	},
-	{
 		host: 'pixeldrain',
 		api_key: '',
 	},
@@ -30,9 +21,5 @@ export const defaultKeysDataValues = [
 		host: 'mixdrop',
 		api_key: '',
 		email: '',
-	},
-	{
-		host: 'anonfiles',
-		api_key: '',
 	},
 ];
