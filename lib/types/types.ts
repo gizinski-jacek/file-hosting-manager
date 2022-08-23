@@ -34,12 +34,54 @@ export interface TempUserToken extends JwtPayload {
 }
 
 export interface PixeldrainFile {
-	id: string;
-	name: string;
+	abuse_reporter_name: string;
+	abuse_type: string;
+	allow_video_player: boolean;
+	availability: string;
+	availability_message: string;
+	bandwith_used: number;
+	bandwith_used_paid: number;
+	can_edit: boolean;
+	date_last_view: string;
 	date_upload: string;
-	size: number;
+	download_speed_limit: number;
 	downloads: number;
-	[key: string]: string | number;
+	hash_sha256: string;
+	id: string;
+	mime_type: string;
+	name: string;
+	show_ads: boolean;
+	size: number;
+	thumbnail_href: string;
+	views: number;
+}
+
+export interface PixeldrainFolder {
+	can_edit: boolean;
+	date_created: string;
+	file_count: number;
+	id: string;
+	title: string;
+}
+
+export interface MixdropFile {
+	added: string;
+	deleted: boolean;
+	duration: string | null;
+	fileref: string;
+	isaudio: boolean;
+	isvideo: boolean;
+	size: string;
+	status: string;
+	subtitle: boolean;
+	thumb: string | null;
+	title: string;
+	url: string;
+}
+
+export interface MixdropFolder {
+	id: string;
+	title: string;
 }
 
 export interface APIKeyData {
