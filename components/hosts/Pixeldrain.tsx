@@ -18,8 +18,8 @@ import {
 	SelectChangeEvent,
 } from '@mui/material';
 import { Refresh } from '@mui/icons-material';
-import { PixeldrainFile } from '../../lib/types/types';
-import FileDataWrapper from '../../lib/wrappers/FileDataWrapper';
+import { PixeldrainFile, PixeldrainFolder } from '../../lib/types/types';
+import FileDataWrapperPD from '../../lib/wrappers/FileDataWrapperPD';
 
 const style = {
 	position: 'absolute' as 'absolute',
@@ -38,21 +38,21 @@ const style = {
 
 const Pixeldrain = () => {
 	const [filesData, setFilesData] = useState<PixeldrainFile[]>([]);
-	const [foldersData, setFoldersData] = useState<PixeldrainFile[]>([]);
+	const [foldersData, setFoldersData] = useState<PixeldrainFolder[]>([]);
 	const [selectedFolder, setSelectedFolder] = useState('root');
-	const [openModal, setOpenModal] = useState(false);
+	const [openFilesFormModal, setOpenFilesFormModal] = useState(false);
+	const [openFolderFormModal, setOpenFolderFormModal] = useState(false);
 	const [createFolderInput, setCreateFolderInput] = useState('');
 	const [uploadData, setUploadData] = useState<File[]>([]);
 	const [uploadErrors, setUploadErrors] = useState<string[]>([]);
-	const [checkedFiles, setCheckedFiles] = useState<string[]>([]);
+	const [checkedFilesIds, setCheckedFilesIds] = useState<string[]>([]);
 	const [fetching, setFetching] = useState(false);
 
 	const fileRef = useRef<HTMLInputElement>(null);
 	const checkboxRef = useRef<HTMLInputElement>(null);
 
-	const handleGetMainData = async () => {
+	const handleGetMainData = useCallback(async () => {
 		try {
-			setFetching(true);
 			const res: AxiosResponse[] = await axios.all([
 				axios.get('/api/host/pixeldrain/get-user-files', {
 					withCredentials: true,
@@ -67,29 +67,35 @@ const Pixeldrain = () => {
 		} catch (error) {
 			console.log(error);
 		}
-	};
+	}, []);
 
-	const handleGetFolderFilesData = useCallback(async () => {
+	const handleGetFolderFilesData = useCallback(async (value: string) => {
 		try {
-			if (selectedFolder === 'root') {
-				handleGetMainData();
-			} else {
-				setFetching(true);
-				const res = await axios.get(
-					`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`
-				);
-				setFilesData(res.data);
-				setFetching(false);
-			}
+			const res = await axios.get(
+				`/api/host/mixdrop/get-single-folder?id=${value}`
+			);
+			setFilesData(res.data);
+			setFetching(false);
 		} catch (error) {
 			console.log(error);
 		}
-	}, [selectedFolder]);
+	}, []);
 
-	const handleGetSingleFile = async (fileId: string, fileName: string) => {
+	const handleFetchData = useCallback(async () => {
+		setFetching(true);
+		setTimeout(() => {
+			if (selectedFolder === 'root') {
+				handleGetMainData();
+			} else {
+				handleGetFolderFilesData(selectedFolder);
+			}
+		}, 1000);
+	}, [selectedFolder, handleGetMainData, handleGetFolderFilesData]);
+
+	const handleDownloadSingleFile = async (fileId: string, fileName: string) => {
 		try {
 			const res = await axios.get(
-				`/api/host/pixeldrain/get-single-file?id=${fileId}`,
+				`/api/host/pixeldrain/download-single-file?id=${fileId}`,
 				{ responseType: 'blob' }
 			);
 			const fileURL = window.URL.createObjectURL(new Blob([res.data]));
@@ -166,8 +172,9 @@ const Pixeldrain = () => {
 				{ withCredentials: true }
 			);
 			if (res.status === 200) {
-				handleCloseModal();
-				handleGetFolderFilesData();
+				handleResetFormsAndErrors();
+				handleCloseFilesFormModal();
+				handleFetchData();
 			}
 		} catch (error) {
 			console.log(error);
@@ -178,42 +185,85 @@ const Pixeldrain = () => {
 		if (filesData.length === 0) {
 			return;
 		}
-		if (checkedFiles.length === filesData.length) {
-			setCheckedFiles([]);
+		if (checkedFilesIds.length === filesData.length) {
+			setCheckedFilesIds([]);
 		} else {
-			setCheckedFiles(filesData.map((file) => file.id));
+			setCheckedFilesIds(filesData.map((file) => file.id));
 		}
 	};
 
 	const handleCheckboxToggle = (e: React.ChangeEvent<HTMLInputElement>) => {
 		if (e.target.checked) {
-			setCheckedFiles((prevState) => [...prevState, e.target.value]);
+			setCheckedFilesIds((prevState) => [...prevState, e.target.value]);
 		} else {
-			setCheckedFiles((prevState) =>
+			setCheckedFilesIds((prevState) =>
 				prevState.filter((s) => s !== e.target.value)
 			);
+		}
+	};
+	const handleDownloadSelectedFiles = async () => {
+		try {
+			if (checkedFilesIds.length === 0) {
+				return;
+			}
+			const res = await axios.get(
+				'/api/host/pixeldrain/download-multiple-files',
+				{ params: { files: checkedFilesIds } }
+			);
+			res.data.forEach((file) => {
+				setTimeout(() => {
+					const fileURL = window.URL.createObjectURL(new Blob([file]));
+					const link = document.createElement('a');
+					link.href = fileURL;
+					link.setAttribute('download', file.file.name);
+					document.body.appendChild(link);
+					link.click();
+					return;
+				}, 500);
+			});
+		} catch (error) {
+			console.log(error);
+		}
+	};
+
+	const handleAddSelectedToNewFolder = async () => {
+		try {
+			if (checkedFilesIds.length === 0 || !createFolderInput) {
+				return;
+			}
+			const formData = new FormData();
+			checkedFilesIds.forEach((id, index) => {
+				formData.append('id_' + index, id);
+			});
+			formData.append('folder', createFolderInput);
+			const res = await axios.post(
+				'/api/host/pixeldrain/add-multiple-files-to-folder',
+				formData
+			);
+			if (res.status === 200) {
+				setCheckedFilesIds([]);
+				handleCloseFolderFormModal();
+				handleFetchData();
+			}
+		} catch (error) {
+			console.log(error);
 		}
 	};
 
 	const handleDeleteFiles = async () => {
 		try {
 			const res = await axios.delete('/api/host/pixeldrain/delete-files', {
-				data: checkedFiles,
+				data: checkedFilesIds,
 			});
 			if (res.status === 200) {
 				if (
-					filesData.length === checkedFiles.length &&
+					filesData.length === checkedFilesIds.length &&
 					selectedFolder !== 'root'
 				) {
 					setSelectedFolder('root');
-					return;
 				}
-				setCheckedFiles([]);
-				if (!checkboxRef.current) {
-					return;
-				}
-				checkboxRef.current.checked = false;
-				handleGetFolderFilesData();
+				setCheckedFilesIds([]);
+				handleFetchData();
 			}
 		} catch (error) {
 			console.log(error);
@@ -224,23 +274,37 @@ const Pixeldrain = () => {
 		setSelectedFolder(e.target.value);
 	};
 
-	const handleOpenModal = () => {
-		setOpenModal(true);
+	const handleOpenFilesFormModal = () => {
+		setOpenFilesFormModal(true);
 	};
 
-	const handleCloseModal = () => {
+	const handleCloseFilesFormModal = () => {
+		setOpenFilesFormModal(false);
+		handleResetFormsAndErrors();
+	};
+
+	const handleOpenFolderFormModal = () => {
+		setOpenFolderFormModal(true);
+	};
+
+	const handleCloseFolderFormModal = () => {
+		setOpenFolderFormModal(false);
+		handleResetFormsAndErrors();
+	};
+
+	const handleResetFormsAndErrors = () => {
 		setUploadData([]);
 		setCreateFolderInput('');
-		setOpenModal(false);
+		setUploadErrors([]);
 	};
 
 	useEffect(() => {
-		handleGetMainData();
-	}, []);
+		handleFetchData();
+	}, [handleFetchData]);
 
 	useEffect(() => {
-		handleGetFolderFilesData();
-	}, [selectedFolder, handleGetFolderFilesData]);
+		handleFetchData();
+	}, [selectedFolder, handleFetchData]);
 
 	return (
 		<>
@@ -249,10 +313,7 @@ const Pixeldrain = () => {
 					{fetching ? (
 						<CircularProgress size={24} />
 					) : (
-						<Refresh
-							sx={{ cursor: 'pointer' }}
-							onClick={handleGetFolderFilesData}
-						/>
+						<Refresh sx={{ cursor: 'pointer' }} onClick={handleFetchData} />
 					)}
 				</Grid>
 				<Grid item xs={'auto'}>
@@ -276,13 +337,26 @@ const Pixeldrain = () => {
 				</Grid>
 				<Grid item xs={'auto'}>
 					<Box sx={{ mx: 1 }}>
-						<Button type='button' onClick={handleOpenModal}>
-							Upload Files
+						<Button type='button' onClick={handleOpenFilesFormModal}>
+							Upload files
 						</Button>
-						<Button type='button' onClick={handleDeleteFiles}>
-							Delete Selected Files
-						</Button>
-						<Modal open={openModal} onClose={handleCloseModal}>
+						{checkedFilesIds.length > 0 ? (
+							<>
+								<Button type='button' onClick={handleOpenFolderFormModal}>
+									Add selected files to new folder
+								</Button>
+								<Button type='button' onClick={handleDownloadSelectedFiles}>
+									Download selected files
+								</Button>
+								<Button type='button' onClick={handleDeleteFiles}>
+									Delete selected files
+								</Button>
+							</>
+						) : null}
+						<Modal
+							open={openFilesFormModal}
+							onClose={handleCloseFilesFormModal}
+						>
 							<Box sx={style}>
 								<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
 									<Button type='button' onClick={clickSelectFiles}>
@@ -343,6 +417,36 @@ const Pixeldrain = () => {
 								</FormControl>
 							</Box>
 						</Modal>
+						<Modal
+							open={openFolderFormModal}
+							onClose={handleCloseFolderFormModal}
+						>
+							<Box sx={style}>
+								<FormControl>
+									<FormControl sx={{ my: 1 }}>
+										<InputLabel htmlFor='create_folder'>
+											New folder name
+										</InputLabel>
+										<Input
+											id='create_folder'
+											name='create_folder'
+											type='text'
+											value={createFolderInput}
+											onChange={(e) => handleFolderInputChange(e)}
+											placeholder='Folder name'
+										/>
+									</FormControl>
+									{uploadErrors.map((message, index) => (
+										<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
+											{message}
+										</FormHelperText>
+									))}
+									<Button type='button' onClick={handleAddSelectedToNewFolder}>
+										Add files to new folder
+									</Button>
+								</FormControl>
+							</Box>
+						</Modal>
 					</Box>
 				</Grid>
 			</Grid>
@@ -356,7 +460,7 @@ const Pixeldrain = () => {
 								size='small'
 								checked={
 									filesData.length > 0 &&
-									filesData.length === checkedFiles.length
+									filesData.length === checkedFilesIds.length
 										? true
 										: false
 								}
@@ -384,11 +488,11 @@ const Pixeldrain = () => {
 			</Grid>
 			<Grid container>
 				{filesData.map((file) => (
-					<FileDataWrapper
+					<FileDataWrapperPD
 						key={file.id}
 						data={file}
-						getFile={handleGetSingleFile}
-						checkboxState={checkedFiles.includes(file.id)}
+						getFile={handleDownloadSingleFile}
+						checkboxState={checkedFilesIds.includes(file.id)}
 						handleCheckbox={handleCheckboxToggle}
 					/>
 				))}
