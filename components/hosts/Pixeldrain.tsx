@@ -72,7 +72,7 @@ const Pixeldrain = () => {
 	const handleGetFolderFilesData = useCallback(async (value: string) => {
 		try {
 			const res = await axios.get(
-				`/api/host/mixdrop/get-single-folder?id=${value}`
+				`/api/host/pixeldrain/get-single-folder?id=${value}`
 			);
 			setFilesData(res.data);
 			setFetching(false);
