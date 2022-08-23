@@ -393,7 +393,7 @@ const Pixeldrain = () => {
 											required
 										/>
 									</FormControl>
-									<FormControl sx={{ my: 1 }}>
+									<FormControl sx={{ my: 2 }}>
 										<InputLabel htmlFor='create_folder'>
 											Add files to new folder?
 										</InputLabel>
@@ -421,9 +421,9 @@ const Pixeldrain = () => {
 							open={openFolderFormModal}
 							onClose={handleCloseFolderFormModal}
 						>
-							<Box sx={style}>
+							<Box sx={{ ...style, height: 200 }}>
 								<FormControl>
-									<FormControl sx={{ my: 1 }}>
+									<FormControl sx={{ my: 2 }}>
 										<InputLabel htmlFor='create_folder'>
 											New folder name
 										</InputLabel>
