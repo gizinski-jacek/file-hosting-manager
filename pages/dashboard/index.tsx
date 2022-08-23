@@ -1,8 +1,6 @@
 import type { NextPage } from 'next';
-import Gofile from '../../components/hosts/Gofile';
 import Pixeldrain from '../../components/hosts/Pixeldrain';
 import Mixdrop from '../../components/hosts/Mixdrop';
-import Anonfiles from '../../components/hosts/Anonfiles';
 import { HostContext } from '../../hooks/HostProvider';
 import { useContext, useState } from 'react';
 import { Box, Button, Grid } from '@mui/material';
@@ -21,13 +19,15 @@ import axios from 'axios';
 import APIKeyForm from '../../components/APIKeyForm';
 
 const hostComponents = {
-	gofile: Gofile,
 	pixeldrain: Pixeldrain,
 	mixdrop: Mixdrop,
-	anonfiles: Anonfiles,
 };
 
-const Dashboard: NextPage = ({ keysData }) => {
+interface Props {
+	keysData: APIKeyExists[];
+}
+
+const Dashboard = ({ keysData }: Props) => {
 	const { host, updateHost } = useContext(HostContext);
 	const { data: user } = useSession();
 	const [keyListStatus, setKeyListStatus] = useState<APIKeyExists[]>(keysData);
