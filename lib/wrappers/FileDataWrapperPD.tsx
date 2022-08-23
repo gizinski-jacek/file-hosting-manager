@@ -8,7 +8,7 @@ interface Props {
 	handleCheckbox: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const FileDataWrapper = ({
+const FileDataWrapperPD = ({
 	data,
 	getFile,
 	checkboxState,
@@ -70,7 +70,7 @@ const FileDataWrapper = ({
 				})}
 			</Grid>
 			<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
-				{data.size}
+				{data.size} B
 			</Grid>
 			<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
 				{data.downloads}
@@ -82,4 +82,4 @@ const FileDataWrapper = ({
 	);
 };
 
-export default FileDataWrapper;
+export default FileDataWrapperPD;
