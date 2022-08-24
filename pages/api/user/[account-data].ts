@@ -65,7 +65,7 @@ export default async function handler(
 			if (req.method === 'DELETE') {
 				const { host } = req.query as { host: string };
 				await connectMongo();
-				const user: MongoUserModel | null = await User.findById(
+				const user: MongoUserModel = await User.findById(
 					session.user._id
 				).exec();
 				if (!user) {
