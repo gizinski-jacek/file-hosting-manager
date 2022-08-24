@@ -1,4 +1,4 @@
-import type { NextPage } from 'next';
+import type { GetServerSidePropsContext } from 'next';
 import Pixeldrain from '../../components/hosts/Pixeldrain';
 import Mixdrop from '../../components/hosts/Mixdrop';
 import { HostContext } from '../../hooks/HostProvider';
@@ -78,12 +78,14 @@ const Dashboard = ({ keysData }: Props) => {
 			{host ? (
 				keyListStatus.find((k) => k.host === host) ? (
 					<Box sx={{ width: '100%', height: '100%', overflow: 'auto' }}>
-						<HostComponent updateKey={handleUpdateKey} />
+						<HostComponent />
 					</Box>
 				) : (
 					<Box sx={{ p: 5, textAlign: 'center' }}>
 						<APIKeyForm
-							formFields={defaultKeysDataValues.find((k) => k.host === host)}
+							formFields={
+								defaultKeysDataValues.find((k) => k.host === host) as APIKeyData
+							}
 							submitKey={handleKeyFormSubmit}
 						/>
 					</Box>
@@ -118,53 +120,55 @@ const Dashboard = ({ keysData }: Props) => {
 	);
 };
 
-export const getServerSideProps = async (context) => {
-	const session = await getSession(context);
-	if (session && session.user) {
-		await connectMongo();
-		const user: MongoUserModel = await User.findById(session.user._id)
-			.lean()
-			.select('+api_data')
-			.exec();
-		if (!user) {
-			return context.res.status(404).json('User not found');
-		}
-		const keysData: APIKeyExists[] = user.api_data.map((item) => {
-			const keyStatus = { host: item.host, has_key: true };
-			for (const [key, value] of Object.entries(item)) {
-				if (!value) {
-					keyStatus.has_key = false;
-					break;
-				}
+export const getServerSideProps = async (
+	context: GetServerSidePropsContext
+) => {
+	let keysData: APIKeyExists[] = [];
+	try {
+		const session = await getSession(context);
+		if (session && session.user) {
+			await connectMongo();
+			const user: MongoUserModel = await User.findById(session.user._id)
+				.lean()
+				.select('+api_data')
+				.exec();
+			if (!user || !user.api_data) {
+				return;
 			}
-			return keyStatus;
-		});
+			keysData = user.api_data.map((item) => {
+				const keyStatus = { host: item.host, has_key: true };
+				for (const [key, value] of Object.entries(item)) {
+					if (!value) {
+						keyStatus.has_key = false;
+						break;
+					}
+				}
+				return keyStatus;
+			});
+		} else if (context.req.cookies.tempUserToken) {
+			if (!process.env.JWT_STRATEGY_SECRET) {
+				return;
+			}
+			const decodedToken = jwt.verify(
+				context.req.cookies.tempUserToken,
+				process.env.JWT_STRATEGY_SECRET
+			) as TempUserToken;
+			keysData = decodedToken.api_data.map((item) => {
+				const keyStatus = { host: item.host, has_key: true };
+				for (const [key, value] of Object.entries(item)) {
+					if (!value) {
+						keyStatus.has_key = false;
+						break;
+					}
+				}
+				return keyStatus;
+			});
+		}
 		return {
 			props: { keysData },
 		};
-	} else if (context.req.cookies.tempUserToken) {
-		if (!process.env.JWT_STRATEGY_SECRET) {
-			return context.res.status(404).json('Server error');
-		}
-		const decodedToken: TempUserToken = jwt.verify(
-			context.req.cookies.tempUserToken,
-			process.env.JWT_STRATEGY_SECRET
-		);
-		const keysData: APIKeyExists[] = decodedToken.api_data.map((item) => {
-			const keyStatus = { host: item.host, has_key: true };
-			for (const [key, value] of Object.entries(item)) {
-				if (!value) {
-					keyStatus.has_key = false;
-					break;
-				}
-			}
-			return keyStatus;
-		});
-		return {
-			props: { keysData },
-		};
-	} else {
-		const keysData: APIKeyExists[] = [];
+	} catch (error) {
+		console.log(error);
 		return {
 			props: { keysData },
 		};
