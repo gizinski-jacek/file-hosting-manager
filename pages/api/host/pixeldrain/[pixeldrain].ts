@@ -128,6 +128,22 @@ export default async function handler(
 				return res.status(401).end();
 			}
 		}
+		if (req.query.pixeldrain === 'get-single-folder') {
+			try {
+				const apiRes = await axios.get(
+					`https://pixeldrain.com/api/list/${req.query.id}`
+				);
+				return res.status(200).json(apiRes.data.files);
+			} catch (error) {
+				if (error instanceof AxiosError) {
+					return res
+						.status(error?.response?.status || 404)
+						.json(error?.response?.data || 'Unknown error');
+				} else {
+					return res.status(404).json('Unknown error');
+				}
+			}
+		}
 		if (req.query.pixeldrain === 'download-single-file') {
 			try {
 				const apiRes = await axios.get(
@@ -167,22 +183,6 @@ export default async function handler(
 				const resFiles = (await Promise.all(promiseArray)) as AxiosResponse[];
 				const returnFiles: File[] = resFiles.map((r) => r.data.file);
 				return res.status(200).json(returnFiles);
-			} catch (error) {
-				if (error instanceof AxiosError) {
-					return res
-						.status(error?.response?.status || 404)
-						.json(error?.response?.data || 'Unknown error');
-				} else {
-					return res.status(404).json('Unknown error');
-				}
-			}
-		}
-		if (req.query.pixeldrain === 'get-single-folder') {
-			try {
-				const apiRes = await axios.get(
-					`https://pixeldrain.com/api/list/${req.query.id}`
-				);
-				return res.status(200).json(apiRes.data.files);
 			} catch (error) {
 				if (error instanceof AxiosError) {
 					return res
