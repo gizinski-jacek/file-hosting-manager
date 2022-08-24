@@ -1,4 +1,11 @@
-import { Button, Checkbox, FormControl, FormGroup, Grid } from '@mui/material';
+import {
+	Box,
+	Button,
+	Checkbox,
+	FormControl,
+	FormGroup,
+	Grid,
+} from '@mui/material';
 import { PixeldrainFile } from '../types/types';
 
 interface Props {
@@ -15,11 +22,12 @@ const FileDataWrapperPD = ({
 	handleCheckbox,
 }: Props) => {
 	return (
-		<Grid container alignItems={'center'} mx={2} id={data.id}>
+		<Grid container alignItems={'center'} id={data.id}>
 			<Grid item xs={'auto'}>
 				<FormControl>
 					<FormGroup>
 						<Checkbox
+							sx={{ p: 0.5, mr: 1 }}
 							size='small'
 							color='error'
 							value={data.id}
@@ -34,15 +42,12 @@ const FileDataWrapperPD = ({
 				xs={true}
 				sx={{
 					display: 'flex',
-					px: 1,
 					justifyContent: 'space-between',
 					alignItems: 'center',
 				}}
 			>
-				<Grid item xs={true} textAlign='start'>
-					{data.name}
-				</Grid>
-				<Grid item xs={'auto'}>
+				<Box sx={{ flex: 1, textAlign: 'start' }}>{data.name}</Box>
+				<Box>
 					<Button
 						type='button'
 						size='small'
@@ -58,9 +63,9 @@ const FileDataWrapperPD = ({
 					>
 						Direct Link
 					</Button>
-				</Grid>
+				</Box>
 			</Grid>
-			<Grid item xs={2} sx={{ px: 1, textAlign: 'end' }}>
+			<Grid item xs={2} sx={{ textAlign: 'end' }}>
 				{new Date(data.date_upload).toLocaleDateString(undefined, {
 					year: 'numeric',
 					month: 'numeric',
@@ -69,13 +74,13 @@ const FileDataWrapperPD = ({
 					minute: 'numeric',
 				})}
 			</Grid>
-			<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
+			<Grid item xs={1} sx={{ textAlign: 'end' }}>
 				{data.size} B
 			</Grid>
-			<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
+			<Grid item xs={1} sx={{ textAlign: 'end' }}>
 				{data.downloads}
 			</Grid>
-			<Grid item xs={1} sx={{ px: 1, textAlign: 'end' }}>
+			<Grid item xs={1} sx={{ textAlign: 'end' }}>
 				{data.views}
 			</Grid>
 		</Grid>
