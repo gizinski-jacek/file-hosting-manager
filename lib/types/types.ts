@@ -87,7 +87,7 @@ export interface MixdropFolder {
 export interface APIKeyData {
 	host: string;
 	api_key: string;
-	email?: string;
+	email?: string | undefined;
 }
 
 export interface APIKeyExists {
