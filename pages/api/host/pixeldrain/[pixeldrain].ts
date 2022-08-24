@@ -20,15 +20,12 @@ export default async function handler(
 	req: NextApiRequest,
 	res: NextApiResponse
 ) {
+	const session = await unstable_getServerSession(req, res, nextAuthOptions);
 	if (req.method === 'GET') {
 		if (req.query.pixeldrain === 'get-user-files') {
-			const session = await unstable_getServerSession(
-				req,
-				res,
-				nextAuthOptions
-			);
 			if (session && session.user) {
 				try {
+					// extract this functionality for easier reuse
 					await connectMongo();
 					const user: MongoUserModel = await User.findById(session.user._id)
 						.select('+api_data')
@@ -45,6 +42,7 @@ export default async function handler(
 					if (!userAPIData.api_key) {
 						return res.status(404).json('No api key');
 					}
+					//
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/files',
 						{
@@ -101,11 +99,6 @@ export default async function handler(
 			}
 		}
 		if (req.query.pixeldrain === 'get-user-folders') {
-			const session = await unstable_getServerSession(
-				req,
-				res,
-				nextAuthOptions
-			);
 			if (session && session.user) {
 				try {
 					const user: MongoUserModel = await User.findById(session.user._id)
@@ -249,11 +242,6 @@ export default async function handler(
 	}
 	if (req.method === 'POST') {
 		if (req.query.pixeldrain === 'add-file') {
-			const session = await unstable_getServerSession(
-				req,
-				res,
-				nextAuthOptions
-			);
 			if (session && session.user) {
 				const form = new formidable.IncomingForm();
 				form.parse(
@@ -441,11 +429,6 @@ export default async function handler(
 			}
 		}
 		if (req.query.pixeldrain === 'add-multiple-files-to-folder') {
-			const session = await unstable_getServerSession(
-				req,
-				res,
-				nextAuthOptions
-			);
 			if (session && session.user) {
 				const form = new formidable.IncomingForm();
 				form.parse(
@@ -600,11 +583,6 @@ export default async function handler(
 	}
 	if (req.method === 'DELETE') {
 		if (req.query.pixeldrain === 'delete-files') {
-			const session = await unstable_getServerSession(
-				req,
-				res,
-				nextAuthOptions
-			);
 			if (session && session.user) {
 				const form = new formidable.IncomingForm();
 				form.parse(
