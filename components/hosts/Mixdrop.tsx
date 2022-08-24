@@ -90,27 +90,27 @@ const Mixdrop = () => {
 	}, [selectedFolder, handleGetAllData, handleGetFolderData]);
 
 	const handleDownloadSingleFile = async (fileId: string, fileName: string) => {
-		try {
-			const res = await axios.get(
-				`/api/host/mixdrop/download-single-file?id=${fileId}`,
-				{ responseType: 'blob' }
-			);
-			const fileURL = window.URL.createObjectURL(new Blob([res.data]));
-			const link = document.createElement('a');
-			link.href = fileURL;
-			link.setAttribute('download', fileName);
-			document.body.appendChild(link);
-			link.click();
-			return;
-		} catch (error) {
-			console.log(error);
-		}
+		// try {
+		// 	const res = await axios.get(
+		// 		`/api/host/mixdrop/download-single-file?id=${fileId}`,
+		// 		{ responseType: 'blob' }
+		// 	);
+		// 	const fileURL = window.URL.createObjectURL(new Blob([res.data]));
+		// 	const link = document.createElement('a');
+		// 	link.href = fileURL;
+		// 	link.setAttribute('download', fileName);
+		// 	document.body.appendChild(link);
+		// 	link.click();
+		// 	return;
+		// } catch (error) {
+		// 	console.log(error);
+		// }
 	};
 
 	const handleFolderInputChange = (
 		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
 	) => {
-		setCreateFolderInput(e.target.value);
+		// setCreateFolderInput(e.target.value);
 	};
 
 	const clickSelectFiles = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -127,7 +127,7 @@ const Mixdrop = () => {
 			return;
 		}
 		if (files.length > 500) {
-			errorsArray.push('Max number of files to opload is 500');
+			errorsArray.push('Max number of files to upload is 500');
 		}
 		for (let i = 0; i < files.length; i++) {
 			if (files[i].name.length > 255) {
@@ -156,30 +156,30 @@ const Mixdrop = () => {
 	};
 
 	const handleUploadFiles = async () => {
-		try {
-			if (!uploadData) {
-				return;
-			}
-			const uploadFormData = new FormData();
-			if (createFolderInput) {
-				uploadFormData.append('folder', createFolderInput);
-			}
-			uploadData.forEach((file, index) => {
-				uploadFormData.append('file_' + index, file);
-			});
-			const res = await axios.post(
-				`/api/host/mixdrop/add-file`,
-				uploadFormData,
-				{ withCredentials: true }
-			);
-			if (res.status === 200) {
-				handleResetFormsAndErrors();
-				handleCloseFilesFormModal();
-				handleFetchData();
-			}
-		} catch (error) {
-			console.log(error);
-		}
+		// try {
+		// 	if (!uploadData) {
+		// 		return;
+		// 	}
+		// 	const uploadFormData = new FormData();
+		// 	if (createFolderInput) {
+		// 		uploadFormData.append('folder', createFolderInput);
+		// 	}
+		// 	uploadData.forEach((file, index) => {
+		// 		uploadFormData.append('file_' + index, file);
+		// 	});
+		// 	const res = await axios.post(
+		// 		`/api/host/mixdrop/add-files`,
+		// 		uploadFormData,
+		// 		{ withCredentials: true }
+		// 	);
+		// 	if (res.status === 200) {
+		// 		handleResetFormsAndErrors();
+		// 		handleCloseFilesFormModal();
+		// 		handleFetchData();
+		// 	}
+		// } catch (error) {
+		// 	console.log(error);
+		// }
 	};
 
 	const toggleAllFilesCheckbox = () => {
@@ -203,69 +203,69 @@ const Mixdrop = () => {
 		}
 	};
 	const handleDownloadSelectedFiles = async () => {
-		try {
-			if (checkedFilesIds.length === 0) {
-				return;
-			}
-			const res = await axios.get('/api/host/mixdrop/download-multiple-files', {
-				params: { files: checkedFilesIds },
-			});
-			res.data.forEach((file: File) => {
-				const fileURL = window.URL.createObjectURL(new Blob([file]));
-				const link = document.createElement('a');
-				link.href = fileURL;
-				link.setAttribute('download', file.name);
-				document.body.appendChild(link);
-				link.click();
-				return;
-			});
-		} catch (error) {
-			console.log(error);
-		}
+		// try {
+		// 	if (checkedFilesIds.length === 0) {
+		// 		return;
+		// 	}
+		// 	const res = await axios.get('/api/host/mixdrop/download-multiple-files', {
+		// 		params: { files: checkedFilesIds },
+		// 	});
+		// 	res.data.forEach((file: File) => {
+		// 		const fileURL = window.URL.createObjectURL(new Blob([file]));
+		// 		const link = document.createElement('a');
+		// 		link.href = fileURL;
+		// 		link.setAttribute('download', file.name);
+		// 		document.body.appendChild(link);
+		// 		link.click();
+		// 		return;
+		// 	});
+		// } catch (error) {
+		// 	console.log(error);
+		// }
 	};
 
 	const handleAddSelectedToNewFolder = async () => {
-		try {
-			if (checkedFilesIds.length === 0 || !createFolderInput) {
-				return;
-			}
-			const formData = new FormData();
-			checkedFilesIds.forEach((id, index) => {
-				formData.append('id_' + index, id);
-			});
-			formData.append('folder', createFolderInput);
-			const res = await axios.post(
-				'/api/host/mixdrop/add-multiple-files-to-folder',
-				formData
-			);
-			if (res.status === 200) {
-				setCheckedFilesIds([]);
-				handleCloseFolderFormModal();
-				handleFetchData();
-			}
-		} catch (error) {
-			console.log(error);
-		}
+		// try {
+		// 	if (checkedFilesIds.length === 0 || !createFolderInput) {
+		// 		return;
+		// 	}
+		// 	const formData = new FormData();
+		// 	checkedFilesIds.forEach((id, index) => {
+		// 		formData.append('id_' + index, id);
+		// 	});
+		// 	formData.append('folder', createFolderInput);
+		// 	const res = await axios.post(
+		// 		'/api/host/mixdrop/add-multiple-files-to-folder',
+		// 		formData
+		// 	);
+		// 	if (res.status === 200) {
+		// 		setCheckedFilesIds([]);
+		// 		handleCloseFolderFormModal();
+		// 		handleFetchData();
+		// 	}
+		// } catch (error) {
+		// 	console.log(error);
+		// }
 	};
 
 	const handleDeleteFiles = async () => {
-		try {
-			const res = await axios.delete('/api/host/mixdrop/delete-files', {
-				data: checkedFilesIds,
-			});
-			if (res.status === 200) {
-				if (
-					filesData.length === checkedFilesIds.length &&
-					selectedFolder !== 'root'
-				) {
-					setSelectedFolder('root');
-				}
-				setCheckedFilesIds([]);
-				handleFetchData();
-			}
-		} catch (error) {
-			console.log(error);
-		}
+		// try {
+		// 	const res = await axios.delete('/api/host/mixdrop/delete-files', {
+		// 		data: checkedFilesIds,
+		// 	});
+		// 	if (res.status === 200) {
+		// 		if (
+		// 			filesData.length === checkedFilesIds.length &&
+		// 			selectedFolder !== 'root'
+		// 		) {
+		// 			setSelectedFolder('root');
+		// 		}
+		// 		setCheckedFilesIds([]);
+		// 		handleFetchData();
+		// 	}
+		// } catch (error) {
+		// 	console.log(error);
+		// }
 	};
 
 	const handleFolderChange = (folder: MixdropFolder) => {
