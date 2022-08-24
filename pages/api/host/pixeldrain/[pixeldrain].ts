@@ -1,13 +1,11 @@
 // Next.js API route support: https://nextjs.org/docs/api-routes/introduction
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios';
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { unstable_getServerSession } from 'next-auth';
-import connectMongo from '../../../../lib/mongodb';
-import { MongoUserModel, TempUserToken } from '../../../../lib/types/types';
-import User from '../../../../models/user';
+import { APIKeyData } from '../../../../lib/types/types';
 import { nextAuthOptions } from '../../auth/[...nextauth]';
-import jwt from 'jsonwebtoken';
 import formidable from 'formidable-serverless';
+import { getUserKeyFromDB, getUserKeyFromToken } from '../../../../lib/helpers';
 
 export const config = {
 	api: {
@@ -25,62 +23,41 @@ export default async function handler(
 		if (req.query.pixeldrain === 'get-user-files') {
 			if (session && session.user) {
 				try {
-					// extract this functionality for easier reuse
-					await connectMongo();
-					const user: MongoUserModel = await User.findById(session.user._id)
-						.select('+api_data')
-						.exec();
-					if (!user) {
-						return res.status(404).json('User not found');
-					}
-					const userAPIData = user.api_data.find(
-						(d) => d.host === 'pixeldrain'
+					const userKey = await getUserKeyFromDB(
+						session.user._id,
+						'pixeldrain'
 					);
-					if (!userAPIData) {
-						return res.status(404).json('No api data');
-					}
-					if (!userAPIData.api_key) {
-						return res.status(404).json('No api key');
-					}
-					//
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/files',
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 							},
 						}
 					);
 					return res.status(200).json(apiRes.data.files);
-				} catch (error) {
+				} catch (error: any | Error) {
 					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
 					} else {
-						return res.status(404).json('Unknown error');
+						return res
+							.status(error.code || 404)
+							.json(error.message || 'Unknown error');
 					}
 				}
 			} else if (req.cookies.tempUserToken) {
-				if (!process.env.JWT_STRATEGY_SECRET) {
-					return res.status(404).json('Server error');
-				}
-				const decodedToken: TempUserToken = jwt.verify(
+				const userKey = getUserKeyFromToken(
 					req.cookies.tempUserToken,
-					process.env.JWT_STRATEGY_SECRET
+					'pixeldrain'
 				);
-				const userAPIData = decodedToken.api_data.find(
-					(d) => d.host === 'pixeldrain'
-				);
-				if (!userAPIData) {
-					return res.status(404).json('No api data');
-				}
-				if (!userAPIData.api_key) {
-					return res.status(404).json('No api key');
-				}
 				try {
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/files',
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 							},
 						}
 					);
@@ -101,26 +78,15 @@ export default async function handler(
 		if (req.query.pixeldrain === 'get-user-folders') {
 			if (session && session.user) {
 				try {
-					const user: MongoUserModel = await User.findById(session.user._id)
-						.select('+api_data')
-						.exec();
-					if (!user) {
-						return res.status(404).json('User not found');
-					}
-					const userAPIData = user.api_data.find(
-						(d) => d.host === 'pixeldrain'
+					const userKey: APIKeyData = await getUserKeyFromDB(
+						session.user._id,
+						'pixeldrain'
 					);
-					if (!userAPIData) {
-						return res.status(404).json('No api data');
-					}
-					if (!userAPIData.api_key) {
-						return res.status(404).json('No api key');
-					}
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/lists',
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 							},
 						}
 					);
@@ -135,28 +101,16 @@ export default async function handler(
 					}
 				}
 			} else if (req.cookies.tempUserToken) {
-				if (!process.env.JWT_STRATEGY_SECRET) {
-					return res.status(404).json('Server error');
-				}
-				const decodedToken: TempUserToken = jwt.verify(
+				const userKey = getUserKeyFromToken(
 					req.cookies.tempUserToken,
-					process.env.JWT_STRATEGY_SECRET
+					'pixeldrain'
 				);
-				const userAPIData = decodedToken.api_data.find(
-					(d) => d.host === 'pixeldrain'
-				);
-				if (!userAPIData) {
-					return res.status(404).json('No api data');
-				}
-				if (!userAPIData.api_key) {
-					return res.status(404).json('No api key');
-				}
 				try {
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/lists',
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 							},
 						}
 					);
@@ -210,8 +164,8 @@ export default async function handler(
 						}, 500 * index);
 					});
 				});
-				const resFiles = await Promise.all(promiseArray);
-				const returnFiles = resFiles.map((file) => file.data);
+				const resFiles = (await Promise.all(promiseArray)) as AxiosResponse[];
+				const returnFiles: File[] = resFiles.map((r) => r.data.file);
 				return res.status(200).json(returnFiles);
 			} catch (error) {
 				if (error instanceof AxiosError) {
@@ -243,6 +197,10 @@ export default async function handler(
 	if (req.method === 'POST') {
 		if (req.query.pixeldrain === 'add-file') {
 			if (session && session.user) {
+				const userKey: APIKeyData = await getUserKeyFromDB(
+					session.user._id,
+					'pixeldrain'
+				);
 				const form = new formidable.IncomingForm();
 				form.parse(
 					req,
@@ -261,22 +219,6 @@ export default async function handler(
 							return res.status(404).json('No files selected');
 						}
 						try {
-							await connectMongo();
-							const user: MongoUserModel = await User.findById(session.user._id)
-								.select('+api_data')
-								.exec();
-							if (!user) {
-								return res.status(404).json('User not found');
-							}
-							const userAPIData = user.api_data.find(
-								(d) => d.host === 'pixeldrain'
-							);
-							if (!userAPIData) {
-								return res.status(404).json('No api data');
-							}
-							if (!userAPIData.api_key) {
-								return res.status(404).json('No api key');
-							}
 							const filesArray = [];
 							for (const [key, file] of Object.entries(filesData)) {
 								filesArray.push(file);
@@ -287,7 +229,7 @@ export default async function handler(
 									{ file: file },
 									{
 										headers: {
-											Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+											Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 										},
 									}
 								)
@@ -305,9 +247,7 @@ export default async function handler(
 										},
 										{
 											headers: {
-												Authorization: `Basic ${btoa(
-													':' + userAPIData.api_key
-												)}`,
+												Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 											},
 										}
 									);
@@ -334,22 +274,10 @@ export default async function handler(
 					}
 				);
 			} else if (req.cookies.tempUserToken) {
-				if (!process.env.JWT_STRATEGY_SECRET) {
-					return res.status(404).json('Server error');
-				}
-				const decodedToken: TempUserToken = jwt.verify(
+				const userKey = getUserKeyFromToken(
 					req.cookies.tempUserToken,
-					process.env.JWT_STRATEGY_SECRET
+					'pixeldrain'
 				);
-				const userAPIData = decodedToken.api_data.find(
-					(d) => d.host === 'pixeldrain'
-				);
-				if (!userAPIData) {
-					return res.status(404).json('No api data');
-				}
-				if (!userAPIData.api_key) {
-					return res.status(404).json('No api key');
-				}
 				const form = new formidable.IncomingForm();
 				form.parse(
 					req,
@@ -367,22 +295,22 @@ export default async function handler(
 						if (Object.keys(filesData).length === 0) {
 							return res.status(404).json('No files selected');
 						}
+						const filesArray = [];
+						for (const [key, file] of Object.entries(filesData)) {
+							filesArray.push(file);
+						}
+						const promiseArray = filesArray.map((file) =>
+							axios.put(
+								`https://pixeldrain.com/api/file/${file.name}`,
+								{ file: file },
+								{
+									headers: {
+										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+									},
+								}
+							)
+						);
 						try {
-							const filesArray = [];
-							for (const [key, file] of Object.entries(filesData)) {
-								filesArray.push(file);
-							}
-							const promiseArray = filesArray.map((file) =>
-								axios.put(
-									`https://pixeldrain.com/api/file/${file.name}`,
-									{ file: file },
-									{
-										headers: {
-											Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
-										},
-									}
-								)
-							);
 							const resFiles = await Promise.all(promiseArray);
 							if (fieldsData.folder) {
 								const filesIdArray = resFiles.map((r) => r.data);
@@ -396,9 +324,7 @@ export default async function handler(
 										},
 										{
 											headers: {
-												Authorization: `Basic ${btoa(
-													':' + userAPIData.api_key
-												)}`,
+												Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 											},
 										}
 									);
@@ -430,6 +356,10 @@ export default async function handler(
 		}
 		if (req.query.pixeldrain === 'add-multiple-files-to-folder') {
 			if (session && session.user) {
+				const userKey: APIKeyData = await getUserKeyFromDB(
+					session.user._id,
+					'pixeldrain'
+				);
 				const form = new formidable.IncomingForm();
 				form.parse(
 					req,
@@ -457,22 +387,6 @@ export default async function handler(
 							idList.push({ id: value });
 						}
 						try {
-							await connectMongo();
-							const user: MongoUserModel = await User.findById(session.user._id)
-								.select('+api_data')
-								.exec();
-							if (!user) {
-								return res.status(404).json('User not found');
-							}
-							const userAPIData = user.api_data.find(
-								(d) => d.host === 'pixeldrain'
-							);
-							if (!userAPIData) {
-								return res.status(404).json('No api data');
-							}
-							if (!userAPIData.api_key) {
-								return res.status(404).json('No api key');
-							}
 							try {
 								await axios.post(
 									'https://pixeldrain.com/api/list',
@@ -483,7 +397,7 @@ export default async function handler(
 									},
 									{
 										headers: {
-											Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+											Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 										},
 									}
 								);
@@ -509,22 +423,10 @@ export default async function handler(
 					}
 				);
 			} else if (req.cookies.tempUserToken) {
-				if (!process.env.JWT_STRATEGY_SECRET) {
-					return res.status(404).json('Server error');
-				}
-				const decodedToken: TempUserToken = jwt.verify(
+				const userKey = getUserKeyFromToken(
 					req.cookies.tempUserToken,
-					process.env.JWT_STRATEGY_SECRET
+					'pixeldrain'
 				);
-				const userAPIData = decodedToken.api_data.find(
-					(d) => d.host === 'pixeldrain'
-				);
-				if (!userAPIData) {
-					return res.status(404).json('No api data');
-				}
-				if (!userAPIData.api_key) {
-					return res.status(404).json('No api key');
-				}
 				const form = new formidable.IncomingForm();
 				form.parse(
 					req,
@@ -561,7 +463,7 @@ export default async function handler(
 								},
 								{
 									headers: {
-										Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 									},
 								}
 							);
@@ -584,6 +486,10 @@ export default async function handler(
 	if (req.method === 'DELETE') {
 		if (req.query.pixeldrain === 'delete-files') {
 			if (session && session.user) {
+				const userKey: APIKeyData = await getUserKeyFromDB(
+					session.user._id,
+					'pixeldrain'
+				);
 				const form = new formidable.IncomingForm();
 				form.parse(
 					req,
@@ -602,22 +508,6 @@ export default async function handler(
 							return res.status(404).json('No files selected');
 						}
 						try {
-							await connectMongo();
-							const user: MongoUserModel = await User.findById(session.user._id)
-								.select('+api_data')
-								.exec();
-							if (!user) {
-								return res.status(404).json('User not found');
-							}
-							const userAPIData = user.api_data.find(
-								(d) => d.host === 'pixeldrain'
-							);
-							if (!userAPIData) {
-								return res.status(404).json('No api data');
-							}
-							if (!userAPIData.api_key) {
-								return res.status(404).json('No api key');
-							}
 							const idArray = [];
 							for (const [key, id] of Object.entries(fieldsData)) {
 								idArray.push(id);
@@ -625,7 +515,7 @@ export default async function handler(
 							const promiseArray = idArray.map((id) =>
 								axios.delete(`https://pixeldrain.com/api/file/${id}`, {
 									headers: {
-										Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
+										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
 									},
 								})
 							);
@@ -643,22 +533,10 @@ export default async function handler(
 					}
 				);
 			} else if (req.cookies.tempUserToken) {
-				if (!process.env.JWT_STRATEGY_SECRET) {
-					return res.status(404).json('Server error');
-				}
-				const decodedToken: TempUserToken = jwt.verify(
+				const userKey = getUserKeyFromToken(
 					req.cookies.tempUserToken,
-					process.env.JWT_STRATEGY_SECRET
+					'pixeldrain'
 				);
-				const userAPIData = decodedToken.api_data.find(
-					(d) => d.host === 'pixeldrain'
-				);
-				if (!userAPIData) {
-					return res.status(404).json('No api data');
-				}
-				if (!userAPIData.api_key) {
-					return res.status(404).json('No api key');
-				}
 				const form = new formidable.IncomingForm();
 				form.parse(
 					req,
@@ -676,18 +554,18 @@ export default async function handler(
 						if (Object.keys(fieldsData).length === 0) {
 							return res.status(404).json('No files selected');
 						}
+						const idArray = [];
+						for (const [key, id] of Object.entries(fieldsData)) {
+							idArray.push(id);
+						}
+						const promiseArray = idArray.map((id) =>
+							axios.delete(`https://pixeldrain.com/api/file/${id}`, {
+								headers: {
+									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								},
+							})
+						);
 						try {
-							const idArray = [];
-							for (const [key, id] of Object.entries(fieldsData)) {
-								idArray.push(id);
-							}
-							const promiseArray = idArray.map((id) =>
-								axios.delete(`https://pixeldrain.com/api/file/${id}`, {
-									headers: {
-										Authorization: `Basic ${btoa(':' + userAPIData.api_key)}`,
-									},
-								})
-							);
 							await Promise.all(promiseArray);
 							return res.status(200).json({ success: true });
 						} catch (error) {
