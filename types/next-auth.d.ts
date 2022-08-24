@@ -7,15 +7,8 @@ declare module 'next-auth' {
 	interface Session {
 		'types/*.ts';
 		user?: {
-			/** The user's postal address. */
-			_id?: string;
-			username?: string;
-			email?: string;
-			api_data: {
-				host: string;
-				api_key: string;
-				[key: string]: string;
-			}[];
+			_id: string;
+			username: string;
 		} & DefaultSession['user'];
 	}
 }
