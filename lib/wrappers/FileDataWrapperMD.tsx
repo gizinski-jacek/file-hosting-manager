@@ -1,4 +1,11 @@
-import { Button, Checkbox, FormControl, FormGroup, Grid } from '@mui/material';
+import {
+	Box,
+	Button,
+	Checkbox,
+	FormControl,
+	FormGroup,
+	Grid,
+} from '@mui/material';
 import { MixdropFile } from '../types/types';
 
 interface Props {
@@ -15,11 +22,12 @@ const FileDataWrapperMD = ({
 	handleCheckbox,
 }: Props) => {
 	return (
-		<Grid container alignItems={'center'} mx={2} id={data.fileref}>
+		<Grid container alignItems={'center'} id={data.fileref}>
 			<Grid item xs={'auto'}>
 				<FormControl>
 					<FormGroup>
 						<Checkbox
+							sx={{ p: 0.5, mr: 1 }}
 							size='small'
 							color='error'
 							value={data.fileref}
@@ -34,15 +42,12 @@ const FileDataWrapperMD = ({
 				xs={true}
 				sx={{
 					display: 'flex',
-					px: 1,
 					justifyContent: 'space-between',
 					alignItems: 'center',
 				}}
 			>
-				<Grid item xs={true} textAlign='start'>
-					{data.title}
-				</Grid>
-				<Grid item xs={'auto'}>
+				<Box sx={{ flex: 1, textAlign: 'start' }}>{data.title}</Box>
+				<Box>
 					<Button
 						type='button'
 						size='small'
@@ -53,7 +58,7 @@ const FileDataWrapperMD = ({
 					<Button component='a' size='small' href={data.url} target='_blank'>
 						Direct Link
 					</Button>
-				</Grid>
+				</Box>
 			</Grid>
 			<Grid item xs={2} sx={{ px: 1, textAlign: 'end' }}>
 				{new Date(Number(data.added)).toLocaleDateString(undefined, {
