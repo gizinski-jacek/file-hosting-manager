@@ -101,6 +101,7 @@ const Dashboard = ({ keysData }: Props) => {
 						{supportedHostList.map((host, index) => (
 							<Grid key={index} item xs={3} sx={{ textAlign: 'center' }}>
 								<Button
+									type='button'
 									variant='contained'
 									color={
 										keyListStatus.find((k) => k.host === host)

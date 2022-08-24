@@ -55,7 +55,13 @@ const FileDataWrapperMD = ({
 					>
 						Download
 					</Button>
-					<Button component='a' size='small' href={data.url} target='_blank'>
+					<Button
+						type='button'
+						component='a'
+						size='small'
+						href={data.url}
+						target='_blank'
+					>
 						Direct Link
 					</Button>
 				</Box>

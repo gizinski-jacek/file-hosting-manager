@@ -56,6 +56,7 @@ const FileDataWrapperPD = ({
 						Download
 					</Button>
 					<Button
+						type='button'
 						component='a'
 						size='small'
 						href={`https://pixeldrain.com/u/${data.id}`}
