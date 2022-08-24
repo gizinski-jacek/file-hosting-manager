@@ -49,7 +49,6 @@ const Pixeldrain = () => {
 	const [fetching, setFetching] = useState(false);
 
 	const fileRef = useRef<HTMLInputElement>(null);
-	const checkboxRef = useRef<HTMLInputElement>(null);
 
 	const handleGetMainData = useCallback(async () => {
 		try {
@@ -83,13 +82,11 @@ const Pixeldrain = () => {
 
 	const handleFetchData = useCallback(async () => {
 		setFetching(true);
-		setTimeout(() => {
-			if (selectedFolder === 'root') {
-				handleGetMainData();
-			} else {
-				handleGetFolderFilesData(selectedFolder);
-			}
-		}, 1000);
+		if (selectedFolder === 'root') {
+			handleGetMainData();
+		} else {
+			handleGetFolderFilesData(selectedFolder);
+		}
 	}, [selectedFolder, handleGetMainData, handleGetFolderFilesData]);
 
 	const handleDownloadSingleFile = async (fileId: string, fileName: string) => {
@@ -210,16 +207,14 @@ const Pixeldrain = () => {
 				'/api/host/pixeldrain/download-multiple-files',
 				{ params: { files: checkedFilesIds } }
 			);
-			res.data.forEach((file) => {
-				setTimeout(() => {
-					const fileURL = window.URL.createObjectURL(new Blob([file]));
-					const link = document.createElement('a');
-					link.href = fileURL;
-					link.setAttribute('download', file.file.name);
-					document.body.appendChild(link);
-					link.click();
-					return;
-				}, 500);
+			res.data.forEach((file: File) => {
+				const fileURL = window.URL.createObjectURL(new Blob([file]));
+				const link = document.createElement('a');
+				link.href = fileURL;
+				link.setAttribute('download', file.name);
+				document.body.appendChild(link);
+				link.click();
+				return;
 			});
 		} catch (error) {
 			console.log(error);
@@ -455,7 +450,6 @@ const Pixeldrain = () => {
 					<FormControl>
 						<FormGroup>
 							<Checkbox
-								ref={checkboxRef}
 								color='error'
 								size='small'
 								checked={
