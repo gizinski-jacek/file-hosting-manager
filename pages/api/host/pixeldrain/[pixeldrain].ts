@@ -195,7 +195,7 @@ export default async function handler(
 		}
 	}
 	if (req.method === 'POST') {
-		if (req.query.pixeldrain === 'add-file') {
+		if (req.query.pixeldrain === 'add-files') {
 			if (session && session.user) {
 				const userKey: APIKeyData = await getUserKeyFromDB(
 					session.user._id,
