@@ -46,12 +46,10 @@ export default async function handler(
 					'mixdrop'
 				);
 				try {
-					const apiRes = await axios.get('https://mixdrop.com/api/user/lists', {
-						headers: {
-							Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-						},
-					});
-					return res.status(200).json(apiRes.data.lists);
+					const apiRes = await axios.get(
+						`https://api.mixdrop.co/folderlist?email=${userKey.email}&key=${userKey.api_key}`
+					);
+					return res.status(200).json(apiRes.data.result);
 				} catch (error) {
 					if (error instanceof AxiosError) {
 						return res
@@ -86,6 +84,24 @@ export default async function handler(
 					}
 				}
 			} else if (req.cookies.tempUserToken) {
+				const userKey = getUserKeyFromToken(
+					req.cookies.tempUserToken,
+					'mixdrop'
+				);
+				try {
+					const apiRes = await axios.get(
+						`https://api.mixdrop.co/folderlist?email=${userKey.email}&key=${userKey.api_key}&id=${req.query.id}`
+					);
+					return res.status(200).json(apiRes.data.result);
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
 			} else {
 				return res.status(401).end();
 			}
@@ -141,165 +157,243 @@ export default async function handler(
 		// }
 	}
 	if (req.method === 'POST') {
-		// if (req.query.mixdrop === 'add-files') {
-		// 	if (session && session.user) {
-		// 		const userKey: APIKeyData = await getUserKeyFromDB(
-		// 			session.user._id,
-		// 			'mixdrop'
-		// 		);
-		// 		const form = new formidable.IncomingForm();
-		// 		form.parse(
-		// 			req,
-		// 			async (
-		// 				error: Error,
-		// 				fieldsData: { [key: string]: string },
-		// 				filesData: { [key: string]: File }
-		// 			) => {
-		// 				if (error) {
-		// 					return res.status(404).json(error);
-		// 				}
-		// 				if (!filesData) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				if (Object.keys(filesData).length === 0) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				try {
-		// 					const filesArray = [];
-		// 					for (const [key, file] of Object.entries(filesData)) {
-		// 						filesArray.push(file);
-		// 					}
-		// 					const promiseArray = filesArray.map((file) =>
-		// 						axios.put(
-		// 							`https://mixdrop.com/api/file/${file.name}`,
-		// 							{ file: file },
-		// 							{
-		// 								headers: {
-		// 									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 								},
-		// 							}
-		// 						)
-		// 					);
-		// 					const resFiles = await Promise.all(promiseArray);
-		// 					if (fieldsData.folder) {
-		// 						const filesIdArray = resFiles.map((r) => r.data);
-		// 						try {
-		// 							await axios.post(
-		// 								'https://mixdrop.com/api/list',
-		// 								{
-		// 									title: fieldsData.folder,
-		// 									anonymous: false,
-		// 									files: filesIdArray,
-		// 								},
-		// 								{
-		// 									headers: {
-		// 										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 									},
-		// 								}
-		// 							);
-		// 						} catch (error) {
-		// 							if (error instanceof AxiosError) {
-		// 								return res
-		// 									.status(error?.response?.status || 404)
-		// 									.json(error?.response?.data || 'Unknown error');
-		// 							} else {
-		// 								return res.status(404).json('Unknown error');
-		// 							}
-		// 						}
-		// 					}
-		// 					return res.status(200).json({ success: true });
-		// 				} catch (error) {
-		// 					if (error instanceof AxiosError) {
-		// 						return res
-		// 							.status(error?.response?.status || 404)
-		// 							.json(error?.response?.data || 'Unknown error');
-		// 					} else {
-		// 						return res.status(404).json('Unknown error');
-		// 					}
-		// 				}
-		// 			}
-		// 		);
-		// 	} else if (req.cookies.tempUserToken) {
-		// 		const userKey = getUserKeyFromToken(
-		// 			req.cookies.tempUserToken,
-		// 			'mixdrop'
-		// 		);
-		// 		const form = new formidable.IncomingForm();
-		// 		form.parse(
-		// 			req,
-		// 			async (
-		// 				error: Error,
-		// 				fieldsData: { [key: string]: string },
-		// 				filesData: { [key: string]: File }
-		// 			) => {
-		// 				if (error) {
-		// 					return res.status(404).json(error);
-		// 				}
-		// 				if (!filesData) {
-		// 					return res.status(200).json({ success: false });
-		// 				}
-		// 				if (Object.keys(filesData).length === 0) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				const filesArray = [];
-		// 				for (const [key, file] of Object.entries(filesData)) {
-		// 					filesArray.push(file);
-		// 				}
-		// 				const promiseArray = filesArray.map((file) =>
-		// 					axios.put(
-		// 						`https://mixdrop.com/api/file/${file.name}`,
-		// 						{ file: file },
-		// 						{
-		// 							headers: {
-		// 								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 							},
-		// 						}
-		// 					)
-		// 				);
-		// 				try {
-		// 					const resFiles = await Promise.all(promiseArray);
-		// 					if (fieldsData.folder) {
-		// 						const filesIdArray = resFiles.map((r) => r.data);
-		// 						try {
-		// 							await axios.post(
-		// 								'https://mixdrop.com/api/list',
-		// 								{
-		// 									title: fieldsData.folder,
-		// 									anonymous: false,
-		// 									files: filesIdArray,
-		// 								},
-		// 								{
-		// 									headers: {
-		// 										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 									},
-		// 								}
-		// 							);
-		// 						} catch (error) {
-		// 							if (error instanceof AxiosError) {
-		// 								return res
-		// 									.status(error?.response?.status || 404)
-		// 									.json(error?.response?.data || 'Unknown error');
-		// 							} else {
-		// 								return res.status(404).json('Unknown error');
-		// 							}
-		// 						}
-		// 					}
-		// 					return res.status(200).json({ success: true });
-		// 				} catch (error) {
-		// 					if (error instanceof AxiosError) {
-		// 						return res
-		// 							.status(error?.response?.status || 404)
-		// 							.json(error?.response?.data || 'Unknown error');
-		// 					} else {
-		// 						return res.status(404).json('Unknown error');
-		// 					}
-		// 				}
-		// 			}
-		// 		);
-		// 	} else {
-		// 		return res.status(401).end();
-		// 	}
-		// }
+		if (req.query.mixdrop === 'add-files') {
+			if (session && session.user) {
+				const userKey: APIKeyData = await getUserKeyFromDB(
+					session.user._id,
+					'mixdrop'
+				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData, filesData } = await new Promise(
+					(resolve, reject) => {
+						form.parse(
+							req,
+							(
+								error: Error,
+								fieldsData: { [key: string]: string },
+								filesData: { [key: string]: File }
+							) => {
+								if (error) {
+									reject({ error });
+								}
+								if (!filesData) {
+									reject(new Error('No files selected'));
+								}
+								if (Object.keys(filesData).length === 0) {
+									reject(new Error('No files selected'));
+								}
+								resolve({ fieldsData, filesData });
+							}
+						);
+					}
+				);
+				const filesArray = [];
+				for (const [key, file] of Object.entries(filesData)) {
+					filesArray.push(file);
+				}
+				let url = '';
+				if (fieldsData.folder) {
+					url = `https://ul.mixdrop.co/api?email=${userKey.email}&key=${userKey.api_key}&folder=${fieldsData.folder}`;
+				} else {
+					url = `https://ul.mixdrop.co/api?email=${userKey.email}&key=${userKey.api_key}`;
+				}
+				const promiseArray = filesArray.map((file) => axios.post(url, file));
+				try {
+					const resAPI = await Promise.all(promiseArray);
+					console.log(resAPI[0].data);
+					return res.status(401).json({ success: false });
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					console.log(error);
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else if (req.cookies.tempUserToken) {
+				const userKey = getUserKeyFromToken(
+					req.cookies.tempUserToken,
+					'mixdrop'
+				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData, filesData } = await new Promise(
+					(resolve, reject) => {
+						form.parse(
+							req,
+							(
+								error: Error,
+								fieldsData: { [key: string]: string },
+								filesData: { [key: string]: File }
+							) => {
+								if (error) {
+									reject({ error });
+								}
+								if (!filesData) {
+									reject(new Error('No files selected'));
+								}
+								if (Object.keys(filesData).length === 0) {
+									reject(new Error('No files selected'));
+								}
+								resolve({ fieldsData, filesData });
+							}
+						);
+					}
+				);
+				const filesArray = [];
+				for (const [key, file] of Object.entries(filesData)) {
+					filesArray.push(file);
+				}
+				const promiseArray = filesArray.map((file) =>
+					axios.put(
+						`https://mixdrop.com/api/file/${file.name}`,
+						{ file: file },
+						{
+							headers: {
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+							},
+						}
+					)
+				);
+				try {
+					const resFiles = await Promise.all(promiseArray);
+					if (fieldsData.folder) {
+						const filesIdArray = resFiles.map((r) => r.data);
+						try {
+							await axios.post(
+								'https://mixdrop.com/api/list',
+								{
+									title: fieldsData.folder,
+									anonymous: false,
+									files: filesIdArray,
+								},
+								{
+									headers: {
+										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+									},
+								}
+							);
+						} catch (error) {
+							if (error instanceof AxiosError) {
+								return res
+									.status(error?.response?.status || 404)
+									.json(error?.response?.data || 'Unknown error');
+							} else {
+								return res.status(404).json('Unknown error');
+							}
+						}
+					}
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else {
+				return res.status(401).end();
+			}
+		}
+		if (req.query.mixdrop === 'create-folder') {
+			if (session && session.user) {
+				const userKey: APIKeyData = await getUserKeyFromDB(
+					session.user._id,
+					'mixdrop'
+				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData } = await new Promise((resolve, reject) => {
+					form.parse(
+						req,
+						(
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								reject({ error });
+							}
+							if (!fieldsData) {
+								reject(new Error('No folder name'));
+							}
+							if (Object.keys(fieldsData).length === 0) {
+								reject(new Error('No folder name'));
+							}
+							resolve({ fieldsData });
+						}
+					);
+				});
+				try {
+					let url = '';
+					if (fieldsData.parent) {
+						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}&parent=${fieldsData.parent}`;
+					} else {
+						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}`;
+					}
+					await axios.get(url);
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else if (req.cookies.tempUserToken) {
+				const userKey = getUserKeyFromToken(
+					req.cookies.tempUserToken,
+					'mixdrop'
+				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData } = await new Promise((resolve, reject) => {
+					form.parse(
+						req,
+						(
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								reject({ error });
+							}
+							if (!fieldsData) {
+								reject(new Error('No folder name'));
+							}
+							if (Object.keys(fieldsData).length === 0) {
+								reject(new Error('No folder name'));
+							}
+							resolve({ fieldsData });
+						}
+					);
+				});
+				try {
+					let url = '';
+					if (fieldsData.parent) {
+						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}&parent=${fieldsData.parent}`;
+					} else {
+						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}`;
+					}
+					const ress = await axios.get(url);
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else {
+				return res.status(401).end();
+			}
+		}
 		// if (req.query.mixdrop === 'add-multiple-files-to-folder') {
 		// 	if (session && session.user) {
 		// 		const userKey: APIKeyData = await getUserKeyFromDB(
@@ -307,123 +401,125 @@ export default async function handler(
 		// 			'mixdrop'
 		// 		);
 		// 		const form = new formidable.IncomingForm();
-		// 		form.parse(
-		// 			req,
-		// 			async (
-		// 				error: Error,
-		// 				fieldsData: { [key: string]: string },
-		// 				filesData: { [key: string]: File }
-		// 			) => {
-		// 				if (error) {
-		// 					return res.status(404).json(error);
-		// 				}
-		// 				if (!fieldsData && !filesData) {
-		// 					return res.status(200).json({ success: false });
-		// 				}
-		// 				if (
-		// 					Object.entries(fieldsData).some(([key, value]) => value === '')
-		// 				) {
-		// 					return res.status(404).json('No folder name or files selected');
-		// 				}
-		// 				const idList = [];
-		// 				for (const [key, value] of Object.entries(fieldsData)) {
-		// 					if (key === 'folder') {
-		// 						break;
+		// 		const { fieldsData } = await new Promise((resolve, reject) => {
+		// 			form.parse(
+		// 				req,
+		// 				(
+		// 					error: Error,
+		// 					fieldsData: { [key: string]: string },
+		// 					filesData: { [key: string]: File }
+		// 				) => {
+		// 					if (error) {
+		// 						reject({ error });
 		// 					}
-		// 					idList.push({ id: value });
+		// 					if (!fieldsData) {
+		// 						reject(new Error('No folder name or files selected'));
+		// 					}
+		// 					if (Object.keys(fieldsData).length === 0) {
+		// 						reject(new Error('No folder name or files selected'));
+		// 					}
+		// 					resolve({ fieldsData });
 		// 				}
-		// 				try {
-		// 					try {
-		// 						await axios.post(
-		// 							'https://mixdrop.com/api/list',
-		// 							{
-		// 								title: fieldsData.folder,
-		// 								anonymous: false,
-		// 								files: idList,
-		// 							},
-		// 							{
-		// 								headers: {
-		// 									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 								},
-		// 							}
-		// 						);
-		// 					} catch (error) {
-		// 						if (error instanceof AxiosError) {
-		// 							return res
-		// 								.status(error?.response?.status || 404)
-		// 								.json(error?.response?.data || 'Unknown error');
-		// 						} else {
-		// 							return res.status(404).json('Unknown error');
-		// 						}
+		// 			);
+		// 		});
+		// 		const idList = [];
+		// 		for (const [key, value] of Object.entries(fieldsData)) {
+		// 			if (key === 'folder') {
+		// 				break;
+		// 			}
+		// 			idList.push({ id: value });
+		// 		}
+		// 		try {
+		// 			try {
+		// 				await axios.post(
+		// 					'https://mixdrop.com/api/list',
+		// 					{
+		// 						title: fieldsData.folder,
+		// 						anonymous: false,
+		// 						files: idList,
+		// 					},
+		// 					{
+		// 						headers: {
+		// 							Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+		// 						},
 		// 					}
-		// 					return res.status(200).json({ success: true });
-		// 				} catch (error) {
-		// 					if (error instanceof AxiosError) {
-		// 						return res
-		// 							.status(error?.response?.status || 404)
-		// 							.json(error?.response?.data || 'Unknown error');
-		// 					} else {
-		// 						return res.status(404).json('Unknown error');
-		// 					}
+		// 				);
+		// 			} catch (error) {
+		// 				if (error instanceof AxiosError) {
+		// 					return res
+		// 						.status(error?.response?.status || 404)
+		// 						.json(error?.response?.data || 'Unknown error');
+		// 				} else {
+		// 					return res.status(404).json('Unknown error');
 		// 				}
 		// 			}
-		// 		);
+		// 			return res.status(200).json({ success: true });
+		// 		} catch (error) {
+		// 			if (error instanceof AxiosError) {
+		// 				return res
+		// 					.status(error?.response?.status || 404)
+		// 					.json(error?.response?.data || 'Unknown error');
+		// 			} else {
+		// 				return res.status(404).json('Unknown error');
+		// 			}
+		// 		}
 		// 	} else if (req.cookies.tempUserToken) {
 		// 		const userKey = getUserKeyFromToken(
 		// 			req.cookies.tempUserToken,
 		// 			'mixdrop'
 		// 		);
 		// 		const form = new formidable.IncomingForm();
-		// 		form.parse(
-		// 			req,
-		// 			async (
-		// 				error: Error,
-		// 				fieldsData: { [key: string]: string },
-		// 				filesData: { [key: string]: File }
-		// 			) => {
-		// 				if (error) {
-		// 					return res.status(404).json(error);
-		// 				}
-		// 				if (!fieldsData && !filesData) {
-		// 					return res.status(200).json({ success: false });
-		// 				}
-		// 				if (
-		// 					Object.entries(fieldsData).some(([key, value]) => value === '')
-		// 				) {
-		// 					return res.status(404).json('No folder name or files selected');
-		// 				}
-		// 				const idList = [];
-		// 				for (const [key, value] of Object.entries(fieldsData)) {
-		// 					if (key === 'folder') {
-		// 						break;
+		// 		const { fieldsData } = await new Promise((resolve, reject) => {
+		// 			form.parse(
+		// 				req,
+		// 				(
+		// 					error: Error,
+		// 					fieldsData: { [key: string]: string },
+		// 					filesData: { [key: string]: File }
+		// 				) => {
+		// 					if (error) {
+		// 						reject({ error });
 		// 					}
-		// 					idList.push({ id: value });
-		// 				}
-		// 				try {
-		// 					await axios.post(
-		// 						'https://mixdrop.com/api/list',
-		// 						{
-		// 							title: fieldsData.folder,
-		// 							anonymous: false,
-		// 							files: idList,
-		// 						},
-		// 						{
-		// 							headers: {
-		// 								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 							},
-		// 						}
-		// 					);
-		// 				} catch (error) {
-		// 					if (error instanceof AxiosError) {
-		// 						return res
-		// 							.status(error?.response?.status || 404)
-		// 							.json(error?.response?.data || 'Unknown error');
-		// 					} else {
-		// 						return res.status(404).json('Unknown error');
+		// 					if (!fieldsData) {
+		// 						reject(new Error('No folder name or files selected'));
 		// 					}
+		// 					if (Object.keys(fieldsData).length === 0) {
+		// 						reject(new Error('No folder name or files selected'));
+		// 					}
+		// 					resolve({ fieldsData });
 		// 				}
+		// 			);
+		// 		});
+		// 		const idList = [];
+		// 		for (const [key, value] of Object.entries(fieldsData)) {
+		// 			if (key === 'folder') {
+		// 				break;
 		// 			}
-		// 		);
+		// 			idList.push({ id: value });
+		// 		}
+		// 		try {
+		// 			await axios.post(
+		// 				'https://mixdrop.com/api/list',
+		// 				{
+		// 					title: fieldsData.folder,
+		// 					anonymous: false,
+		// 					files: idList,
+		// 				},
+		// 				{
+		// 					headers: {
+		// 						Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+		// 					},
+		// 				}
+		// 			);
+		// 		} catch (error) {
+		// 			if (error instanceof AxiosError) {
+		// 				return res
+		// 					.status(error?.response?.status || 404)
+		// 					.json(error?.response?.data || 'Unknown error');
+		// 			} else {
+		// 				return res.status(404).json('Unknown error');
+		// 			}
+		// 		}
 		// 	} else {
 		// 		return res.status(401).end();
 		// 	}
@@ -437,94 +533,100 @@ export default async function handler(
 		// 			'mixdrop'
 		// 		);
 		// 		const form = new formidable.IncomingForm();
-		// 		form.parse(
-		// 			req,
-		// 			async (
-		// 				error: Error,
-		// 				fieldsData: { [key: string]: string },
-		// 				filesData: { [key: string]: File }
-		// 			) => {
-		// 				if (error) {
-		// 					return res.status(404).json(error);
-		// 				}
-		// 				if (!fieldsData) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				if (Object.keys(fieldsData).length === 0) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				try {
-		// 					const idArray = [];
-		// 					for (const [key, id] of Object.entries(fieldsData)) {
-		// 						idArray.push(id);
+		// 		const { fieldsData } = await new Promise((resolve, reject) => {
+		// 			form.parse(
+		// 				req,
+		// 				(
+		// 					error: Error,
+		// 					fieldsData: { [key: string]: string },
+		// 					filesData: { [key: string]: File }
+		// 				) => {
+		// 					if (error) {
+		// 						reject({ error });
 		// 					}
-		// 					const promiseArray = idArray.map((id) =>
-		// 						axios.delete(`https://mixdrop.com/api/file/${id}`, {
-		// 							headers: {
-		// 								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 							},
-		// 						})
-		// 					);
-		// 					await Promise.all(promiseArray);
-		// 					return res.status(200).json({ success: true });
-		// 				} catch (error) {
-		// 					if (error instanceof AxiosError) {
-		// 						return res
-		// 							.status(error?.response?.status || 404)
-		// 							.json(error?.response?.data || 'Unknown error');
-		// 					} else {
-		// 						return res.status(404).json('Unknown error');
+		// 					if (!fieldsData) {
+		// 						reject(new Error('No files selected'));
 		// 					}
+		// 					if (Object.keys(fieldsData).length === 0) {
+		// 						reject(new Error('No files selected'));
+		// 					}
+		// 					resolve({ fieldsData });
 		// 				}
+		// 			);
+		// 		});
+		// 		try {
+		// 			const idArray = [];
+		// 			for (const [key, id] of Object.entries(fieldsData)) {
+		// 				idArray.push(id);
 		// 			}
-		// 		);
+		// 			const promiseArray = idArray.map((id) =>
+		// 				axios.delete(`https://mixdrop.com/api/file/${id}`, {
+		// 					headers: {
+		// 						Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+		// 					},
+		// 				})
+		// 			);
+		// 			await Promise.all(promiseArray);
+		// 			return res.status(200).json({ success: true });
+		// 		} catch (error) {
+		// 			if (error instanceof AxiosError) {
+		// 				return res
+		// 					.status(error?.response?.status || 404)
+		// 					.json(error?.response?.data || 'Unknown error');
+		// 			} else {
+		// 				return res.status(404).json('Unknown error');
+		// 			}
+		// 		}
 		// 	} else if (req.cookies.tempUserToken) {
 		// 		const userKey = getUserKeyFromToken(
 		// 			req.cookies.tempUserToken,
 		// 			'mixdrop'
 		// 		);
 		// 		const form = new formidable.IncomingForm();
-		// 		form.parse(
-		// 			req,
-		// 			async (
-		// 				error: Error,
-		// 				fieldsData: { [key: string]: string },
-		// 				filesData: { [key: string]: File }
-		// 			) => {
-		// 				if (error) {
-		// 					return res.status(404).json(error);
-		// 				}
-		// 				if (!fieldsData) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				if (Object.keys(fieldsData).length === 0) {
-		// 					return res.status(404).json('No files selected');
-		// 				}
-		// 				const idArray = [];
-		// 				for (const [key, id] of Object.entries(fieldsData)) {
-		// 					idArray.push(id);
-		// 				}
-		// 				const promiseArray = idArray.map((id) =>
-		// 					axios.delete(`https://mixdrop.com/api/file/${id}`, {
-		// 						headers: {
-		// 							Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 						},
-		// 					})
-		// 				);
-		// 				try {
-		// 					await Promise.all(promiseArray);
-		// 					return res.status(200).json({ success: true });
-		// 				} catch (error) {
-		// 					if (error instanceof AxiosError) {
-		// 						return res
-		// 							.status(error?.response?.status || 404)
-		// 							.json(error?.response?.data || 'Unknown error');
-		// 					} else {
-		// 						return res.status(404).json('Unknown error');
+		// 		const { fieldsData } = await new Promise((resolve, reject) => {
+		// 			form.parse(
+		// 				req,
+		// 				(
+		// 					error: Error,
+		// 					fieldsData: { [key: string]: string },
+		// 					filesData: { [key: string]: File }
+		// 				) => {
+		// 					if (error) {
+		// 						reject({ error });
 		// 					}
+		// 					if (!fieldsData) {
+		// 						reject(new Error('No files selected'));
+		// 					}
+		// 					if (Object.keys(fieldsData).length === 0) {
+		// 						reject(new Error('No files selected'));
+		// 					}
+		// 					resolve({ fieldsData });
 		// 				}
-		// 			}
+		// 			);
+		// 		});
+		// 		const idArray = [];
+		// 		for (const [key, id] of Object.entries(fieldsData)) {
+		// 			idArray.push(id);
+		// 		}
+		// 		const promiseArray = idArray.map((id) =>
+		// 			axios.delete(`https://mixdrop.com/api/file/${id}`, {
+		// 				headers: {
+		// 					Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+		// 				},
+		// 			})
 		// 		);
+		// 		try {
+		// 			await Promise.all(promiseArray);
+		// 			return res.status(200).json({ success: true });
+		// 		} catch (error) {
+		// 			if (error instanceof AxiosError) {
+		// 				return res
+		// 					.status(error?.response?.status || 404)
+		// 					.json(error?.response?.data || 'Unknown error');
+		// 			} else {
+		// 				return res.status(404).json('Unknown error');
+		// 			}
+		// 		}
 		// 	} else {
 		// 		return res.status(401).end();
 		// 	}
