@@ -202,264 +202,55 @@ export default async function handler(
 					'pixeldrain'
 				);
 				const form = new formidable.IncomingForm();
-				form.parse(
-					req,
-					async (
-						error: Error,
-						fieldsData: { [key: string]: string },
-						filesData: { [key: string]: File }
-					) => {
-						if (error) {
-							return res.status(404).json(error);
-						}
-						if (!filesData) {
-							return res.status(404).json('No files selected');
-						}
-						if (Object.keys(filesData).length === 0) {
-							return res.status(404).json('No files selected');
-						}
-						try {
-							const filesArray = [];
-							for (const [key, file] of Object.entries(filesData)) {
-								filesArray.push(file);
-							}
-							const promiseArray = filesArray.map((file) =>
-								axios.put(
-									`https://pixeldrain.com/api/file/${file.name}`,
-									{ file: file },
-									{
-										headers: {
-											Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-										},
-									}
-								)
-							);
-							const resFiles = await Promise.all(promiseArray);
-							if (fieldsData.folder) {
-								const filesIdArray = resFiles.map((r) => r.data);
-								try {
-									await axios.post(
-										'https://pixeldrain.com/api/list',
-										{
-											title: fieldsData.folder,
-											anonymous: false,
-											files: filesIdArray,
-										},
-										{
-											headers: {
-												Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-											},
-										}
-									);
-								} catch (error) {
-									if (error instanceof AxiosError) {
-										return res
-											.status(error?.response?.status || 404)
-											.json(error?.response?.data || 'Unknown error');
-									} else {
-										return res.status(404).json('Unknown error');
-									}
+				const { fieldsData, filesData } = await new Promise(
+					(resolve, reject) => {
+						form.parse(
+							req,
+							(
+								error: Error,
+								fieldsData: { [key: string]: string },
+								filesData: { [key: string]: File }
+							) => {
+								if (error) {
+									reject({ error });
 								}
-							}
-							return res.status(200).json({ success: true });
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
-							}
-						}
-					}
-				);
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				form.parse(
-					req,
-					async (
-						error: Error,
-						fieldsData: { [key: string]: string },
-						filesData: { [key: string]: File }
-					) => {
-						if (error) {
-							return res.status(404).json(error);
-						}
-						if (!filesData) {
-							return res.status(200).json({ success: false });
-						}
-						if (Object.keys(filesData).length === 0) {
-							return res.status(404).json('No files selected');
-						}
-						const filesArray = [];
-						for (const [key, file] of Object.entries(filesData)) {
-							filesArray.push(file);
-						}
-						const promiseArray = filesArray.map((file) =>
-							axios.put(
-								`https://pixeldrain.com/api/file/${file.name}`,
-								{ file: file },
-								{
-									headers: {
-										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-									},
+								if (!filesData) {
+									reject(new Error('No files selected'));
 								}
-							)
+								if (Object.keys(filesData).length === 0) {
+									reject(new Error('No files selected'));
+								}
+								resolve({ fieldsData, filesData });
+							}
 						);
-						try {
-							const resFiles = await Promise.all(promiseArray);
-							if (fieldsData.folder) {
-								const filesIdArray = resFiles.map((r) => r.data);
-								try {
-									await axios.post(
-										'https://pixeldrain.com/api/list',
-										{
-											title: fieldsData.folder,
-											anonymous: false,
-											files: filesIdArray,
-										},
-										{
-											headers: {
-												Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-											},
-										}
-									);
-								} catch (error) {
-									if (error instanceof AxiosError) {
-										return res
-											.status(error?.response?.status || 404)
-											.json(error?.response?.data || 'Unknown error');
-									} else {
-										return res.status(404).json('Unknown error');
-									}
-								}
-							}
-							return res.status(200).json({ success: true });
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
-							}
-						}
 					}
 				);
-			} else {
-				return res.status(401).end();
-			}
-		}
-		if (req.query.pixeldrain === 'add-multiple-files-to-folder') {
-			if (session && session.user) {
-				const userKey: APIKeyData = await getUserKeyFromDB(
-					session.user._id,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				form.parse(
-					req,
-					async (
-						error: Error,
-						fieldsData: { [key: string]: string },
-						filesData: { [key: string]: File }
-					) => {
-						if (error) {
-							return res.status(404).json(error);
-						}
-						if (!fieldsData && !filesData) {
-							return res.status(200).json({ success: false });
-						}
-						if (
-							Object.entries(fieldsData).some(([key, value]) => value === '')
-						) {
-							return res.status(404).json('No folder name or files selected');
-						}
-						const idList = [];
-						for (const [key, value] of Object.entries(fieldsData)) {
-							if (key === 'folder') {
-								break;
-							}
-							idList.push({ id: value });
-						}
-						try {
-							try {
-								await axios.post(
-									'https://pixeldrain.com/api/list',
-									{
-										title: fieldsData.folder,
-										anonymous: false,
-										files: idList,
-									},
-									{
-										headers: {
-											Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-										},
-									}
-								);
-							} catch (error) {
-								if (error instanceof AxiosError) {
-									return res
-										.status(error?.response?.status || 404)
-										.json(error?.response?.data || 'Unknown error');
-								} else {
-									return res.status(404).json('Unknown error');
-								}
-							}
-							return res.status(200).json({ success: true });
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
-							}
-						}
+				try {
+					const filesArray = [];
+					for (const [key, file] of Object.entries(filesData)) {
+						filesArray.push(file);
 					}
-				);
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				form.parse(
-					req,
-					async (
-						error: Error,
-						fieldsData: { [key: string]: string },
-						filesData: { [key: string]: File }
-					) => {
-						if (error) {
-							return res.status(404).json(error);
-						}
-						if (!fieldsData && !filesData) {
-							return res.status(200).json({ success: false });
-						}
-						if (
-							Object.entries(fieldsData).some(([key, value]) => value === '')
-						) {
-							return res.status(404).json('No folder name or files selected');
-						}
-						const idList = [];
-						for (const [key, value] of Object.entries(fieldsData)) {
-							if (key === 'folder') {
-								break;
+					const promiseArray = filesArray.map((file) =>
+						axios.put(
+							`https://pixeldrain.com/api/file/${file.name}`,
+							{ file: file },
+							{
+								headers: {
+									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								},
 							}
-							idList.push({ id: value });
-						}
+						)
+					);
+					const resFiles = await Promise.all(promiseArray);
+					if (fieldsData.folder) {
+						const filesIdArray = resFiles.map((r) => r.data);
 						try {
 							await axios.post(
 								'https://pixeldrain.com/api/list',
 								{
 									title: fieldsData.folder,
 									anonymous: false,
-									files: idList,
+									files: filesIdArray,
 								},
 								{
 									headers: {
@@ -477,7 +268,228 @@ export default async function handler(
 							}
 						}
 					}
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else if (req.cookies.tempUserToken) {
+				const userKey = getUserKeyFromToken(
+					req.cookies.tempUserToken,
+					'pixeldrain'
 				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData, filesData } = await new Promise(
+					(resolve, reject) => {
+						form.parse(
+							req,
+							(
+								error: Error,
+								fieldsData: { [key: string]: string },
+								filesData: { [key: string]: File }
+							) => {
+								if (error) {
+									reject({ error });
+								}
+								if (!filesData) {
+									reject(new Error('No files selected'));
+								}
+								if (Object.keys(filesData).length === 0) {
+									reject(new Error('No files selected'));
+								}
+								resolve({ fieldsData, filesData });
+							}
+						);
+					}
+				);
+				const filesArray = [];
+				for (const [key, file] of Object.entries(filesData)) {
+					filesArray.push(file);
+				}
+				const promiseArray = filesArray.map((file) =>
+					axios.put(
+						`https://pixeldrain.com/api/file/${file.name}`,
+						{ file: file },
+						{
+							headers: {
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+							},
+						}
+					)
+				);
+				try {
+					const resFiles = await Promise.all(promiseArray);
+					if (fieldsData.folder) {
+						const filesIdArray = resFiles.map((r) => r.data);
+						try {
+							await axios.post(
+								'https://pixeldrain.com/api/list',
+								{
+									title: fieldsData.folder,
+									anonymous: false,
+									files: filesIdArray,
+								},
+								{
+									headers: {
+										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+									},
+								}
+							);
+						} catch (error) {
+							if (error instanceof AxiosError) {
+								return res
+									.status(error?.response?.status || 404)
+									.json(error?.response?.data || 'Unknown error');
+							} else {
+								return res.status(404).json('Unknown error');
+							}
+						}
+					}
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else {
+				return res.status(401).end();
+			}
+		}
+		if (req.query.pixeldrain === 'add-multiple-files-to-folder') {
+			if (session && session.user) {
+				const userKey: APIKeyData = await getUserKeyFromDB(
+					session.user._id,
+					'pixeldrain'
+				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData } = await new Promise((resolve, reject) => {
+					form.parse(
+						req,
+						(
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								reject({ error });
+							}
+							if (!fieldsData) {
+								reject(new Error('No folder name or files selected'));
+							}
+							if (Object.keys(fieldsData).length === 0) {
+								reject(new Error('No folder name or files selected'));
+							}
+							resolve({ fieldsData });
+						}
+					);
+				});
+				const idList = [];
+				for (const [key, value] of Object.entries(fieldsData)) {
+					if (key === 'folder') {
+						break;
+					}
+					idList.push({ id: value });
+				}
+				try {
+					try {
+						await axios.post(
+							'https://pixeldrain.com/api/list',
+							{
+								title: fieldsData.folder,
+								anonymous: false,
+								files: idList,
+							},
+							{
+								headers: {
+									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								},
+							}
+						);
+					} catch (error) {
+						if (error instanceof AxiosError) {
+							return res
+								.status(error?.response?.status || 404)
+								.json(error?.response?.data || 'Unknown error');
+						} else {
+							return res.status(404).json('Unknown error');
+						}
+					}
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
+			} else if (req.cookies.tempUserToken) {
+				const userKey = getUserKeyFromToken(
+					req.cookies.tempUserToken,
+					'pixeldrain'
+				);
+				const form = new formidable.IncomingForm();
+				const { fieldsData } = await new Promise((resolve, reject) => {
+					form.parse(
+						req,
+						(
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								reject({ error });
+							}
+							if (!fieldsData) {
+								reject(new Error('No folder name or files selected'));
+							}
+							if (Object.keys(fieldsData).length === 0) {
+								reject(new Error('No folder name or files selected'));
+							}
+							resolve({ fieldsData });
+						}
+					);
+				});
+				const idList = [];
+				for (const [key, value] of Object.entries(fieldsData)) {
+					if (key === 'folder') {
+						break;
+					}
+					idList.push({ id: value });
+				}
+				try {
+					await axios.post(
+						'https://pixeldrain.com/api/list',
+						{
+							title: fieldsData.folder,
+							anonymous: false,
+							files: idList,
+						},
+						{
+							headers: {
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+							},
+						}
+					);
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
 			} else {
 				return res.status(401).end();
 			}
@@ -491,94 +503,100 @@ export default async function handler(
 					'pixeldrain'
 				);
 				const form = new formidable.IncomingForm();
-				form.parse(
-					req,
-					async (
-						error: Error,
-						fieldsData: { [key: string]: string },
-						filesData: { [key: string]: File }
-					) => {
-						if (error) {
-							return res.status(404).json(error);
-						}
-						if (!fieldsData) {
-							return res.status(404).json('No files selected');
-						}
-						if (Object.keys(fieldsData).length === 0) {
-							return res.status(404).json('No files selected');
-						}
-						try {
-							const idArray = [];
-							for (const [key, id] of Object.entries(fieldsData)) {
-								idArray.push(id);
+				const { fieldsData } = await new Promise((resolve, reject) => {
+					form.parse(
+						req,
+						(
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								reject({ error });
 							}
-							const promiseArray = idArray.map((id) =>
-								axios.delete(`https://pixeldrain.com/api/file/${id}`, {
-									headers: {
-										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-									},
-								})
-							);
-							await Promise.all(promiseArray);
-							return res.status(200).json({ success: true });
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
+							if (!fieldsData) {
+								reject(new Error('No files selected'));
 							}
+							if (Object.keys(fieldsData).length === 0) {
+								reject(new Error('No files selected'));
+							}
+							resolve({ fieldsData });
 						}
+					);
+				});
+				try {
+					const idArray = [];
+					for (const [key, id] of Object.entries(fieldsData)) {
+						idArray.push(id);
 					}
-				);
+					const promiseArray = idArray.map((id) =>
+						axios.delete(`https://pixeldrain.com/api/file/${id}`, {
+							headers: {
+								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+							},
+						})
+					);
+					await Promise.all(promiseArray);
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
 			} else if (req.cookies.tempUserToken) {
 				const userKey = getUserKeyFromToken(
 					req.cookies.tempUserToken,
 					'pixeldrain'
 				);
 				const form = new formidable.IncomingForm();
-				form.parse(
-					req,
-					async (
-						error: Error,
-						fieldsData: { [key: string]: string },
-						filesData: { [key: string]: File }
-					) => {
-						if (error) {
-							return res.status(404).json(error);
-						}
-						if (!fieldsData) {
-							return res.status(404).json('No files selected');
-						}
-						if (Object.keys(fieldsData).length === 0) {
-							return res.status(404).json('No files selected');
-						}
-						const idArray = [];
-						for (const [key, id] of Object.entries(fieldsData)) {
-							idArray.push(id);
-						}
-						const promiseArray = idArray.map((id) =>
-							axios.delete(`https://pixeldrain.com/api/file/${id}`, {
-								headers: {
-									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-								},
-							})
-						);
-						try {
-							await Promise.all(promiseArray);
-							return res.status(200).json({ success: true });
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
+				const { fieldsData } = await new Promise((resolve, reject) => {
+					form.parse(
+						req,
+						(
+							error: Error,
+							fieldsData: { [key: string]: string },
+							filesData: { [key: string]: File }
+						) => {
+							if (error) {
+								reject({ error });
 							}
+							if (!fieldsData) {
+								reject(new Error('No files selected'));
+							}
+							if (Object.keys(fieldsData).length === 0) {
+								reject(new Error('No files selected'));
+							}
+							resolve({ fieldsData });
 						}
-					}
+					);
+				});
+				const idArray = [];
+				for (const [key, id] of Object.entries(fieldsData)) {
+					idArray.push(id);
+				}
+				const promiseArray = idArray.map((id) =>
+					axios.delete(`https://pixeldrain.com/api/file/${id}`, {
+						headers: {
+							Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+						},
+					})
 				);
+				try {
+					await Promise.all(promiseArray);
+					return res.status(200).json({ success: true });
+				} catch (error) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
+				}
 			} else {
 				return res.status(401).end();
 			}
