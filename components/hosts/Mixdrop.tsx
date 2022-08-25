@@ -17,7 +17,7 @@ import {
 	Modal,
 	Typography,
 } from '@mui/material';
-import { Folder, Refresh } from '@mui/icons-material';
+import { Cancel, Delete, Folder, Refresh } from '@mui/icons-material';
 import { MixdropFile, MixdropFolder } from '../../lib/types/types';
 import FileDataWrapperMD from '../../lib/wrappers/FileDataWrapperMD';
 
@@ -26,8 +26,12 @@ const style = {
 	top: '50%',
 	left: '50%',
 	transform: 'translate(-50%, -50%)',
-	width: 500,
-	height: 500,
+	minWidth: 300,
+	width: '75%',
+	maxWidth: 600,
+	minHeight: 300,
+	height: '75%',
+	maxHeight: 600,
 	bgcolor: 'white',
 	border: '2px solid #000',
 	boxShadow: 24,
@@ -47,7 +51,7 @@ const Mixdrop = () => {
 	const [openFolderFormModal, setOpenFolderFormModal] = useState(false);
 	const [createFolderInput, setCreateFolderInput] = useState('');
 	const [uploadData, setUploadData] = useState<File[]>([]);
-	const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+	const [formErrors, setFormErrors] = useState<string[]>([]);
 	const [checkedFilesIds, setCheckedFilesIds] = useState<string[]>([]);
 	const [fetching, setFetching] = useState(false);
 
@@ -59,8 +63,8 @@ const Mixdrop = () => {
 				'/api/host/mixdrop/get-user-files-and-folders',
 				{ withCredentials: true }
 			);
-			setFilesData(res.data.files);
-			setFoldersData(res.data.folders);
+			setFilesData(res.data.files || res.data);
+			setFoldersData(res.data.folders || res.data);
 			setFetching(false);
 		} catch (error) {
 			console.log(error);
@@ -72,8 +76,8 @@ const Mixdrop = () => {
 			const res = await axios.get(
 				`/api/host/mixdrop/get-single-folder?id=${value}`
 			);
-			setFilesData(res.data.files);
-			setFoldersData(res.data.folders);
+			setFilesData(res.data.files || res.data);
+			setFoldersData(res.data.folders || res.data);
 			setFetching(false);
 		} catch (error) {
 			console.log(error);
@@ -110,7 +114,7 @@ const Mixdrop = () => {
 	const handleFolderInputChange = (
 		e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
 	) => {
-		// setCreateFolderInput(e.target.value);
+		setCreateFolderInput(e.target.value);
 	};
 
 	const clickSelectFiles = (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -119,7 +123,7 @@ const Mixdrop = () => {
 	};
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setUploadErrors([]);
+		setFormErrors([]);
 		const target = e.target as HTMLInputElement;
 		const files = target.files as FileList;
 		const errorsArray = [];
@@ -136,7 +140,7 @@ const Mixdrop = () => {
 			}
 		}
 		if (errorsArray.length > 0) {
-			setUploadErrors(errorsArray);
+			setFormErrors(errorsArray);
 			return;
 		}
 		setUploadData((prevState) => [...prevState, ...files]);
@@ -151,35 +155,58 @@ const Mixdrop = () => {
 		setUploadData(newState);
 	};
 
-	const handleCreateFolder = async () => {
-		//
+	const handleUploadFiles = async () => {
+		try {
+			if (!uploadData) {
+				setFormErrors(['No files selected']);
+				return;
+			}
+			const uploadFormData = new FormData();
+			if (selectedFolder !== 'root') {
+				uploadFormData.append('folder', selectedFolder);
+			}
+			uploadData.forEach(async (file, index) => {
+				uploadFormData.append('file_' + index, file);
+			});
+			const res = await axios.post(
+				`/api/host/mixdrop/add-files`,
+				uploadFormData,
+				{ withCredentials: true }
+			);
+			if (res.status === 200) {
+				handleResetFormsAndErrors();
+				handleCloseFilesFormModal();
+				handleFetchData();
+			}
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
-	const handleUploadFiles = async () => {
-		// try {
-		// 	if (!uploadData) {
-		// 		return;
-		// 	}
-		// 	const uploadFormData = new FormData();
-		// 	if (createFolderInput) {
-		// 		uploadFormData.append('folder', createFolderInput);
-		// 	}
-		// 	uploadData.forEach((file, index) => {
-		// 		uploadFormData.append('file_' + index, file);
-		// 	});
-		// 	const res = await axios.post(
-		// 		`/api/host/mixdrop/add-files`,
-		// 		uploadFormData,
-		// 		{ withCredentials: true }
-		// 	);
-		// 	if (res.status === 200) {
-		// 		handleResetFormsAndErrors();
-		// 		handleCloseFilesFormModal();
-		// 		handleFetchData();
-		// 	}
-		// } catch (error) {
-		// 	console.log(error);
-		// }
+	const handleCreateFolder = async () => {
+		try {
+			if (!createFolderInput) {
+				setFormErrors(['No folder name provided']);
+				return;
+			}
+			const uploadFormData = new FormData();
+			if (selectedFolder !== 'root') {
+				uploadFormData.append('parent', selectedFolder);
+			}
+			uploadFormData.append('folder', createFolderInput);
+			const res = await axios.post(
+				`/api/host/mixdrop/create-folder`,
+				uploadFormData,
+				{ withCredentials: true }
+			);
+			if (res.status === 200) {
+				handleResetFormsAndErrors();
+				handleCloseFolderFormModal();
+				handleFetchData();
+			}
+		} catch (error) {
+			console.log(error);
+		}
 	};
 
 	const toggleAllFilesCheckbox = () => {
@@ -202,6 +229,7 @@ const Mixdrop = () => {
 			);
 		}
 	};
+
 	const handleDownloadSelectedFiles = async () => {
 		// try {
 		// 	if (checkedFilesIds.length === 0) {
@@ -227,6 +255,7 @@ const Mixdrop = () => {
 	const handleAddSelectedToNewFolder = async () => {
 		// try {
 		// 	if (checkedFilesIds.length === 0 || !createFolderInput) {
+		//		setFormErrors(['No folder name provided']);
 		// 		return;
 		// 	}
 		// 	const formData = new FormData();
@@ -301,7 +330,7 @@ const Mixdrop = () => {
 	const handleResetFormsAndErrors = () => {
 		setUploadData([]);
 		setCreateFolderInput('');
-		setUploadErrors([]);
+		setFormErrors([]);
 	};
 
 	useEffect(() => {
@@ -332,23 +361,22 @@ const Mixdrop = () => {
 								sx={{ cursor: 'pointer' }}
 								onClick={() => handleFolderChangeByBreadcrumb(folder)}
 							>
-								<Typography variant='button'>{folder.title}</Typography>
+								<Typography variant='button' color='green'>
+									{folder.title}
+								</Typography>
 							</Box>
 						)
 					)}
 				</Breadcrumbs>
 				<Box>
-					<Button type='button' onClick={handleCreateFolder}>
-						Create folder
-					</Button>
 					<Button type='button' onClick={handleOpenFilesFormModal}>
 						Upload files
 					</Button>
+					<Button type='button' onClick={handleOpenFolderFormModal}>
+						Create folder
+					</Button>
 					{checkedFilesIds.length > 0 ? (
 						<>
-							<Button type='button' onClick={handleOpenFolderFormModal}>
-								Add selected files to new folder
-							</Button>
 							<Button type='button' onClick={handleDownloadSelectedFiles}>
 								Download selected files
 							</Button>
@@ -369,14 +397,14 @@ const Mixdrop = () => {
 							</Box>
 							<List sx={{ flex: 1, overflow: 'auto' }}>
 								{uploadData.map((file, index) => (
-									<ListItem disablePadding key={file.name + index}>
+									<ListItem key={file.name + index} sx={{ p: 0.5 }}>
 										{file.name}
 										<Button
 											type='button'
-											sx={{ ml: 'auto' }}
+											sx={{ ml: 'auto', minWidth: 'unset', p: 0 }}
 											onClick={() => handleRemoveSingleFile(file.name)}
 										>
-											X
+											<Cancel />
 										</Button>
 									</ListItem>
 								))}
@@ -394,20 +422,7 @@ const Mixdrop = () => {
 										required
 									/>
 								</FormControl>
-								<FormControl sx={{ my: 2 }}>
-									<InputLabel htmlFor='create_folder'>
-										Add files to new folder?
-									</InputLabel>
-									<Input
-										id='create_folder'
-										name='create_folder'
-										type='text'
-										value={createFolderInput}
-										onChange={(e) => handleFolderInputChange(e)}
-										placeholder='Folder name'
-									/>
-								</FormControl>
-								{uploadErrors.map((message, index) => (
+								{formErrors.map((message, index) => (
 									<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 										{message}
 									</FormHelperText>
@@ -422,7 +437,17 @@ const Mixdrop = () => {
 						open={openFolderFormModal}
 						onClose={handleCloseFolderFormModal}
 					>
-						<Box sx={{ ...style, height: 200 }}>
+						<Box
+							sx={{
+								...style,
+								minHeight: 'unset',
+								height: 'unset',
+								maxHeight: 200,
+								minWidth: 'unset',
+								width: 300,
+								maxWidth: 'unset',
+							}}
+						>
 							<FormControl>
 								<FormControl sx={{ my: 2 }}>
 									<InputLabel htmlFor='create_folder'>
@@ -437,13 +462,13 @@ const Mixdrop = () => {
 										placeholder='Folder name'
 									/>
 								</FormControl>
-								{uploadErrors.map((message, index) => (
+								{formErrors.map((message, index) => (
 									<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 										{message}
 									</FormHelperText>
 								))}
-								<Button type='button' onClick={handleAddSelectedToNewFolder}>
-									Add files to new folder
+								<Button type='button' onClick={handleCreateFolder}>
+									Create folder
 								</Button>
 							</FormControl>
 						</Box>
