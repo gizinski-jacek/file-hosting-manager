@@ -27,8 +27,15 @@ export default async function handler(
 						session.user._id,
 						'mixdrop'
 					);
+					const config = {
+						params: {
+							email: userKey.email,
+							key: userKey.api_key,
+						},
+					};
 					const apiRes = await axios.get(
-						`https://api.mixdrop.co/folderlist?email=${userKey.email}&key=${userKey.api_key}`
+						'https://api.mixdrop.co/folderlist',
+						config
 					);
 					return res.status(200).json(apiRes.data.result);
 				} catch (error) {
@@ -45,9 +52,16 @@ export default async function handler(
 					req.cookies.tempUserToken,
 					'mixdrop'
 				);
+				const config = {
+					params: {
+						email: userKey.email,
+						key: userKey.api_key,
+					},
+				};
 				try {
 					const apiRes = await axios.get(
-						`https://api.mixdrop.co/folderlist?email=${userKey.email}&key=${userKey.api_key}`
+						'https://api.mixdrop.co/folderlist',
+						config
 					);
 					return res.status(200).json(apiRes.data.result);
 				} catch (error) {
@@ -70,8 +84,15 @@ export default async function handler(
 						session.user._id,
 						'mixdrop'
 					);
+					const config = {
+						params: {
+							email: userKey.email,
+							key: userKey.api_key,
+						},
+					};
 					const apiRes = await axios.get(
-						`https://api.mixdrop.co/folderlist?email=${userKey.email}&key=${userKey.api_key}&id=${req.query.id}`
+						'https://api.mixdrop.co/folderlist',
+						config
 					);
 					return res.status(200).json(apiRes.data.result);
 				} catch (error) {
@@ -88,9 +109,17 @@ export default async function handler(
 					req.cookies.tempUserToken,
 					'mixdrop'
 				);
+				const config = {
+					params: {
+						email: userKey.email,
+						key: userKey.api_key,
+						id: req.query.id,
+					},
+				};
 				try {
 					const apiRes = await axios.get(
-						`https://api.mixdrop.co/folderlist?email=${userKey.email}&key=${userKey.api_key}&id=${req.query.id}`
+						'https://api.mixdrop.co/folderlist',
+						config
 					);
 					return res.status(200).json(apiRes.data.result);
 				} catch (error) {
@@ -191,13 +220,18 @@ export default async function handler(
 				for (const [key, file] of Object.entries(filesData)) {
 					filesArray.push(file);
 				}
-				let url = '';
-				if (fieldsData.folder) {
-					url = `https://ul.mixdrop.co/api?email=${userKey.email}&key=${userKey.api_key}&folder=${fieldsData.folder}`;
-				} else {
-					url = `https://ul.mixdrop.co/api?email=${userKey.email}&key=${userKey.api_key}`;
+				const config = {
+					params: {
+						email: userKey.email,
+						key: userKey.api_key,
+					},
+				};
+				if (fieldsData.parent) {
+					config.params.parent = fieldsData.parent;
 				}
-				const promiseArray = filesArray.map((file) => axios.post(url, file));
+				const promiseArray = filesArray.map((file) =>
+					axios.post('https://ul.mixdrop.co/api', file, config)
+				);
 				try {
 					const resAPI = await Promise.all(promiseArray);
 					console.log(resAPI[0].data);
@@ -246,47 +280,25 @@ export default async function handler(
 				for (const [key, file] of Object.entries(filesData)) {
 					filesArray.push(file);
 				}
+				const config = {
+					params: {
+						email: userKey.email,
+						key: userKey.api_key,
+					},
+				};
+				if (fieldsData.parent) {
+					config.params.parent = fieldsData.parent;
+				}
 				const promiseArray = filesArray.map((file) =>
-					axios.put(
-						`https://mixdrop.com/api/file/${file.name}`,
-						{ file: file },
-						{
-							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-							},
-						}
-					)
+					axios.post('https://ul.mixdrop.co/api', file, config)
 				);
 				try {
-					const resFiles = await Promise.all(promiseArray);
-					if (fieldsData.folder) {
-						const filesIdArray = resFiles.map((r) => r.data);
-						try {
-							await axios.post(
-								'https://mixdrop.com/api/list',
-								{
-									title: fieldsData.folder,
-									anonymous: false,
-									files: filesIdArray,
-								},
-								{
-									headers: {
-										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-									},
-								}
-							);
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
-							}
-						}
-					}
+					const resAPI = await Promise.all(promiseArray);
+					console.log(resAPI[0].data);
+					return res.status(401).json({ success: false });
 					return res.status(200).json({ success: true });
 				} catch (error) {
+					console.log(error);
 					if (error instanceof AxiosError) {
 						return res
 							.status(error?.response?.status || 404)
@@ -327,14 +339,18 @@ export default async function handler(
 						}
 					);
 				});
+				const config = {
+					params: {
+						email: userKey.email,
+						key: userKey.api_key,
+						title: fieldsData.folder,
+					},
+				};
+				if (fieldsData.parent) {
+					config.params.parent = fieldsData.parent;
+				}
 				try {
-					let url = '';
-					if (fieldsData.parent) {
-						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}&parent=${fieldsData.parent}`;
-					} else {
-						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}`;
-					}
-					await axios.get(url);
+					await axios.get('https://api.mixdrop.co/foldercreate', config);
 					return res.status(200).json({ success: true });
 				} catch (error) {
 					if (error instanceof AxiosError) {
@@ -372,14 +388,18 @@ export default async function handler(
 						}
 					);
 				});
+				const config = {
+					params: {
+						email: userKey.email,
+						key: userKey.api_key,
+						title: fieldsData.folder,
+					},
+				};
+				if (fieldsData.parent) {
+					config.params.parent = fieldsData.parent;
+				}
 				try {
-					let url = '';
-					if (fieldsData.parent) {
-						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}&parent=${fieldsData.parent}`;
-					} else {
-						url = `https://api.mixdrop.co/foldercreate?email=${userKey.email}&key=${userKey.api_key}&title=${fieldsData.folder}`;
-					}
-					const ress = await axios.get(url);
+					await axios.get('https://api.mixdrop.co/foldercreate', config);
 					return res.status(200).json({ success: true });
 				} catch (error) {
 					if (error instanceof AxiosError) {
@@ -554,21 +574,25 @@ export default async function handler(
 		// 				}
 		// 			);
 		// 		});
+		// 		const config = {
+		// 			params: {
+		// 				email: userKey.email,
+		// 				key: userKey.api_key,
+		// 			},
+		// 		};
+		// 		const idArray = [];
+		// 		for (const [key, id] of Object.entries(fieldsData)) {
+		// 			idArray.push(id);
+		// 		}
+		// 		// const promiseArray = idArray.map((id) =>
+		// 		// 	axios.delete(`https://api.mixdrop.co/fileinfo?ref=${id}`, config)
+		// 		// );
 		// 		try {
-		// 			const idArray = [];
-		// 			for (const [key, id] of Object.entries(fieldsData)) {
-		// 				idArray.push(id);
-		// 			}
-		// 			const promiseArray = idArray.map((id) =>
-		// 				axios.delete(`https://mixdrop.com/api/file/${id}`, {
-		// 					headers: {
-		// 						Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 					},
-		// 				})
-		// 			);
-		// 			await Promise.all(promiseArray);
+		// 			const ress = await Promise.all(promiseArray);
+		// 			console.log(ress.data);
 		// 			return res.status(200).json({ success: true });
 		// 		} catch (error) {
+		// 			console.log(error);
 		// 			if (error instanceof AxiosError) {
 		// 				return res
 		// 					.status(error?.response?.status || 404)
@@ -604,17 +628,19 @@ export default async function handler(
 		// 				}
 		// 			);
 		// 		});
+		// 		const config = {
+		// 			params: {
+		// 				email: userKey.email,
+		// 				key: userKey.api_key,
+		// 			},
+		// 		};
 		// 		const idArray = [];
 		// 		for (const [key, id] of Object.entries(fieldsData)) {
 		// 			idArray.push(id);
 		// 		}
-		// 		const promiseArray = idArray.map((id) =>
-		// 			axios.delete(`https://mixdrop.com/api/file/${id}`, {
-		// 				headers: {
-		// 					Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-		// 				},
-		// 			})
-		// 		);
+		// 		// const promiseArray = idArray.map((id) =>
+		// 		// 	axios.delete(`https://api.mixdrop.co/fileinfo?ref=${id}`, config)
+		// 		// );
 		// 		try {
 		// 			await Promise.all(promiseArray);
 		// 			return res.status(200).json({ success: true });
