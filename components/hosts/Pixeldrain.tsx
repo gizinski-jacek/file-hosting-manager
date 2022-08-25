@@ -17,7 +17,7 @@ import {
 	Select,
 	SelectChangeEvent,
 } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
+import { Cancel, Refresh } from '@mui/icons-material';
 import { PixeldrainFile, PixeldrainFolder } from '../../lib/types/types';
 import FileDataWrapperPD from '../../lib/wrappers/FileDataWrapperPD';
 
@@ -26,8 +26,12 @@ const style = {
 	top: '50%',
 	left: '50%',
 	transform: 'translate(-50%, -50%)',
-	width: 500,
-	height: 500,
+	minWidth: 300,
+	width: '75%',
+	maxWidth: 600,
+	minHeight: 300,
+	height: '75%',
+	maxHeight: 600,
 	bgcolor: 'white',
 	border: '2px solid #000',
 	boxShadow: 24,
@@ -44,7 +48,7 @@ const Pixeldrain = () => {
 	const [openFolderFormModal, setOpenFolderFormModal] = useState(false);
 	const [createFolderInput, setCreateFolderInput] = useState('');
 	const [uploadData, setUploadData] = useState<File[]>([]);
-	const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+	const [formErrors, setFormErrors] = useState<string[]>([]);
 	const [checkedFilesIds, setCheckedFilesIds] = useState<string[]>([]);
 	const [fetching, setFetching] = useState(false);
 
@@ -119,7 +123,7 @@ const Pixeldrain = () => {
 	};
 
 	const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		setUploadErrors([]);
+		setFormErrors([]);
 		const target = e.target as HTMLInputElement;
 		const files = target.files as FileList;
 		const errorsArray = [];
@@ -127,7 +131,7 @@ const Pixeldrain = () => {
 			return;
 		}
 		if (files.length > 500) {
-			errorsArray.push('Max number of files to opload is 500');
+			errorsArray.push('Max number of files to upload is 500');
 		}
 		for (let i = 0; i < files.length; i++) {
 			if (files[i].name.length > 255) {
@@ -136,7 +140,7 @@ const Pixeldrain = () => {
 			}
 		}
 		if (errorsArray.length > 0) {
-			setUploadErrors(errorsArray);
+			setFormErrors(errorsArray);
 			return;
 		}
 		setUploadData((prevState) => [...prevState, ...files]);
@@ -154,6 +158,7 @@ const Pixeldrain = () => {
 	const handleUploadFiles = async () => {
 		try {
 			if (!uploadData) {
+				setFormErrors(['No files selected']);
 				return;
 			}
 			const uploadFormData = new FormData();
@@ -164,7 +169,7 @@ const Pixeldrain = () => {
 				uploadFormData.append('file_' + index, file);
 			});
 			const res = await axios.post(
-				`/api/host/pixeldrain/add-file`,
+				`/api/host/pixeldrain/add-files`,
 				uploadFormData,
 				{ withCredentials: true }
 			);
@@ -198,6 +203,7 @@ const Pixeldrain = () => {
 			);
 		}
 	};
+
 	const handleDownloadSelectedFiles = async () => {
 		try {
 			if (checkedFilesIds.length === 0) {
@@ -224,6 +230,7 @@ const Pixeldrain = () => {
 	const handleAddSelectedToNewFolder = async () => {
 		try {
 			if (checkedFilesIds.length === 0 || !createFolderInput) {
+				setFormErrors(['No folder name provided']);
 				return;
 			}
 			const formData = new FormData();
@@ -237,6 +244,7 @@ const Pixeldrain = () => {
 			);
 			if (res.status === 200) {
 				setCheckedFilesIds([]);
+				handleResetFormsAndErrors();
 				handleCloseFolderFormModal();
 				handleFetchData();
 			}
@@ -290,7 +298,7 @@ const Pixeldrain = () => {
 	const handleResetFormsAndErrors = () => {
 		setUploadData([]);
 		setCreateFolderInput('');
-		setUploadErrors([]);
+		setFormErrors([]);
 	};
 
 	useEffect(() => {
@@ -355,14 +363,14 @@ const Pixeldrain = () => {
 							</Box>
 							<List sx={{ flex: 1, overflow: 'auto' }}>
 								{uploadData.map((file, index) => (
-									<ListItem disablePadding key={file.name + index}>
+									<ListItem key={file.name + index} sx={{ p: 0.5 }}>
 										{file.name}
 										<Button
 											type='button'
-											sx={{ ml: 'auto' }}
+											sx={{ ml: 'auto', minWidth: 'unset', p: 0 }}
 											onClick={() => handleRemoveSingleFile(file.name)}
 										>
-											X
+											<Cancel />
 										</Button>
 									</ListItem>
 								))}
@@ -393,7 +401,7 @@ const Pixeldrain = () => {
 										placeholder='Folder name'
 									/>
 								</FormControl>
-								{uploadErrors.map((message, index) => (
+								{formErrors.map((message, index) => (
 									<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 										{message}
 									</FormHelperText>
@@ -408,7 +416,17 @@ const Pixeldrain = () => {
 						open={openFolderFormModal}
 						onClose={handleCloseFolderFormModal}
 					>
-						<Box sx={{ ...style, height: 200 }}>
+						<Box
+							sx={{
+								...style,
+								minHeight: 'unset',
+								height: 'unset',
+								maxHeight: 200,
+								minWidth: 'unset',
+								width: 500,
+								maxWidth: 'unset',
+							}}
+						>
 							<FormControl>
 								<FormControl sx={{ my: 2 }}>
 									<InputLabel htmlFor='create_folder'>
@@ -423,7 +441,7 @@ const Pixeldrain = () => {
 										placeholder='Folder name'
 									/>
 								</FormControl>
-								{uploadErrors.map((message, index) => (
+								{formErrors.map((message, index) => (
 									<FormHelperText sx={{ mx: 1, color: 'red' }} key={index}>
 										{message}
 									</FormHelperText>
