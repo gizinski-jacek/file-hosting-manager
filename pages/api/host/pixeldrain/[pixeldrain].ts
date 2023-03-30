@@ -19,19 +19,24 @@ export default async function handler(
 	res: NextApiResponse
 ) {
 	const session = await unstable_getServerSession(req, res, nextAuthOptions);
-	if (req.method === 'GET') {
-		if (req.query.pixeldrain === 'get-user-files') {
-			if (session && session.user) {
+	const { tempUserToken } = req.cookies;
+	const { method } = req;
+	const query = req.query.pixeldrain;
+	const userKeyData: APIKeyData | null =
+		session && session.user
+			? await getUserKeyFromDB(session.user._id, 'pixeldrain')
+			: tempUserToken
+			? getUserKeyFromToken(tempUserToken, 'pixeldrain')
+			: null;
+	if (userKeyData) {
+		if (method === 'GET') {
+			if (query === 'get-user-files') {
 				try {
-					const userKey = await getUserKeyFromDB(
-						session.user._id,
-						'pixeldrain'
-					);
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/files',
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
 							},
 						}
 					);
@@ -42,80 +47,22 @@ export default async function handler(
 							.status(error?.response?.status || 404)
 							.json(error?.response?.data || 'Unknown error');
 					} else {
-						return res
-							.status(error.code || 404)
-							.json(error.message || 'Unknown error');
-					}
-				}
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
-				try {
-					const apiRes = await axios.get(
-						'https://pixeldrain.com/api/user/files',
-						{
-							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-							},
-						}
-					);
-					return res.status(200).json(apiRes.data.files);
-				} catch (error) {
-					if (error instanceof AxiosError) {
-						return res
-							.status(error?.response?.status || 404)
-							.json(error?.response?.data || 'Unknown error');
-					} else {
 						return res.status(404).json('Unknown error');
 					}
 				}
-			} else {
-				return res.status(401).end();
 			}
-		}
-		if (req.query.pixeldrain === 'get-user-folders') {
-			if (session && session.user) {
-				try {
-					const userKey: APIKeyData = await getUserKeyFromDB(
-						session.user._id,
-						'pixeldrain'
-					);
-					const apiRes = await axios.get(
-						'https://pixeldrain.com/api/user/lists',
-						{
-							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-							},
-						}
-					);
-					return res.status(200).json(apiRes.data.lists);
-				} catch (error) {
-					if (error instanceof AxiosError) {
-						return res
-							.status(error?.response?.status || 404)
-							.json(error?.response?.data || 'Unknown error');
-					} else {
-						return res.status(404).json('Unknown error');
-					}
-				}
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
+			if (query === 'get-user-folders') {
 				try {
 					const apiRes = await axios.get(
 						'https://pixeldrain.com/api/user/lists',
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
 							},
 						}
 					);
 					return res.status(200).json(apiRes.data.lists);
-				} catch (error) {
+				} catch (error: any) {
 					if (error instanceof AxiosError) {
 						return res
 							.status(error?.response?.status || 404)
@@ -124,86 +71,87 @@ export default async function handler(
 						return res.status(404).json('Unknown error');
 					}
 				}
-			} else {
-				return res.status(401).end();
 			}
-		}
-		if (req.query.pixeldrain === 'get-single-folder') {
-			try {
-				const apiRes = await axios.get(
-					`https://pixeldrain.com/api/list/${req.query.id}`
-				);
-				return res.status(200).json(apiRes.data.files);
-			} catch (error) {
-				if (error instanceof AxiosError) {
-					return res
-						.status(error?.response?.status || 404)
-						.json(error?.response?.data || 'Unknown error');
-				} else {
-					return res.status(404).json('Unknown error');
+			if (query === 'get-single-folder') {
+				try {
+					const { id } = req.query;
+					const apiRes = await axios.get(
+						`https://pixeldrain.com/api/list/${id}`
+					);
+					return res.status(200).json(apiRes.data.files || []);
+				} catch (error: any) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
 				}
 			}
-		}
-		if (req.query.pixeldrain === 'download-single-file') {
-			try {
-				const apiRes = await axios.get(
-					`https://pixeldrain.com/api/file/${req.query.id}?download`,
-					{ responseType: 'blob' }
-				);
-				return res.status(200).json(apiRes.data);
-			} catch (error) {
-				if (error instanceof AxiosError) {
-					return res
-						.status(error?.response?.status || 404)
-						.json(error?.response?.data || 'Unknown error');
-				} else {
-					return res.status(404).json('Unknown error');
+			if (query === 'download-single-file') {
+				try {
+					const { id } = req.query;
+					const apiRes = await axios.get(
+						`https://pixeldrain.com/api/file/${id}?download`,
+						{ responseType: 'blob' }
+					);
+					return res.status(200).json(apiRes.data);
+				} catch (error: any) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
 				}
 			}
-		}
-		if (req.query.pixeldrain === 'download-multiple-files') {
-			try {
-				let filesIdArray: string[] = [];
-				if (typeof req.query['files[]'] === 'string') {
-					filesIdArray = [req.query['files[]']];
-				} else if (Array.isArray(req.query['files[]'])) {
-					filesIdArray = req.query['files[]'];
-				}
-				const promiseArray = filesIdArray.map((id, index) => {
-					return new Promise((resolve, reject) => {
-						setTimeout(() => {
-							return resolve(
-								axios.get(`https://pixeldrain.com/api/file/${id}?download`, {
-									responseType: 'blob',
-								})
-							);
-						}, 500 * index);
+			if (query === 'download-multiple-files') {
+				try {
+					let filesIdArray: string[] = [];
+					if (typeof req.query['files[]'] === 'string') {
+						filesIdArray = [req.query['files[]']];
+					} else if (Array.isArray(req.query['files[]'])) {
+						filesIdArray = req.query['files[]'];
+					}
+					const promiseArray = filesIdArray.map((id, index) => {
+						return new Promise((resolve, reject) => {
+							setTimeout(() => {
+								return resolve(
+									axios.get(`https://pixeldrain.com/api/file/${id}?download`, {
+										responseType: 'blob',
+									})
+								);
+							}, 500 * index);
+						});
 					});
-				});
-				const resFiles = (await Promise.all(promiseArray)) as AxiosResponse[];
-				const returnFiles: File[] = resFiles.map((r) => r.data.file);
-				return res.status(200).json(returnFiles);
-			} catch (error) {
-				if (error instanceof AxiosError) {
-					return res
-						.status(error?.response?.status || 404)
-						.json(error?.response?.data || 'Unknown error');
-				} else {
-					return res.status(404).json('Unknown error');
+					const resFiles = (await Promise.all(promiseArray)) as AxiosResponse[];
+					const returnFiles: File[] = resFiles.map((r) => r.data.file);
+					return res.status(200).json(returnFiles);
+				} catch (error: any) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
+					}
 				}
 			}
 		}
-	}
-	if (req.method === 'POST') {
-		if (req.query.pixeldrain === 'add-files') {
-			if (session && session.user) {
-				const userKey: APIKeyData = await getUserKeyFromDB(
-					session.user._id,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				const { fieldsData, filesData } = await new Promise(
-					(resolve, reject) => {
+		if (method === 'POST') {
+			// Needs fixing, sends file info, not the file itself.
+			if (query === 'add-files') {
+				try {
+					const form = new formidable.IncomingForm();
+					const {
+						fieldsData,
+						filesData,
+					}: {
+						fieldsData: { [key: string]: string };
+						filesData: { [key: string]: File };
+					} = await new Promise((resolve, reject) => {
 						form.parse(
 							req,
 							(
@@ -223,106 +171,18 @@ export default async function handler(
 								resolve({ fieldsData, filesData });
 							}
 						);
-					}
-				);
-				try {
+					});
 					const filesArray = [];
 					for (const [key, file] of Object.entries(filesData)) {
 						filesArray.push(file);
 					}
-					const promiseArray = filesArray.map((file) =>
-						axios.put(
-							`https://pixeldrain.com/api/file/${file.name}`,
-							{ file: file },
-							{
-								headers: {
-									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-								},
-							}
-						)
-					);
-					const resFiles = await Promise.all(promiseArray);
-					if (fieldsData.folder) {
-						const filesIdArray = resFiles.map((r) => r.data);
-						try {
-							await axios.post(
-								'https://pixeldrain.com/api/list',
-								{
-									title: fieldsData.folder,
-									anonymous: false,
-									files: filesIdArray,
-								},
-								{
-									headers: {
-										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-									},
-								}
-							);
-						} catch (error) {
-							if (error instanceof AxiosError) {
-								return res
-									.status(error?.response?.status || 404)
-									.json(error?.response?.data || 'Unknown error');
-							} else {
-								return res.status(404).json('Unknown error');
-							}
-						}
-					}
-					return res.status(200).json({ success: true });
-				} catch (error) {
-					if (error instanceof AxiosError) {
-						return res
-							.status(error?.response?.status || 404)
-							.json(error?.response?.data || 'Unknown error');
-					} else {
-						return res.status(404).json('Unknown error');
-					}
-				}
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				const { fieldsData, filesData } = await new Promise(
-					(resolve, reject) => {
-						form.parse(
-							req,
-							(
-								error: Error,
-								fieldsData: { [key: string]: string },
-								filesData: { [key: string]: File }
-							) => {
-								if (error) {
-									reject({ error });
-								}
-								if (!filesData) {
-									reject(new Error('No files selected'));
-								}
-								if (Object.keys(filesData).length === 0) {
-									reject(new Error('No files selected'));
-								}
-								resolve({ fieldsData, filesData });
-							}
-						);
-					}
-				);
-				const filesArray = [];
-				for (const [key, file] of Object.entries(filesData)) {
-					filesArray.push(file);
-				}
-				const promiseArray = filesArray.map((file) =>
-					axios.put(
-						`https://pixeldrain.com/api/file/${file.name}`,
-						{ file: file },
-						{
+					const promiseArray = filesArray.map(async (file) =>
+						axios.put(`https://pixeldrain.com/api/file/${file.name}`, file, {
 							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
 							},
-						}
-					)
-				);
-				try {
+						})
+					);
 					const resFiles = await Promise.all(promiseArray);
 					if (fieldsData.folder) {
 						const filesIdArray = resFiles.map((r) => r.data);
@@ -336,11 +196,11 @@ export default async function handler(
 								},
 								{
 									headers: {
-										Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+										Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
 									},
 								}
 							);
-						} catch (error) {
+						} catch (error: any) {
 							if (error instanceof AxiosError) {
 								return res
 									.status(error?.response?.status || 404)
@@ -351,7 +211,8 @@ export default async function handler(
 						}
 					}
 					return res.status(200).json({ success: true });
-				} catch (error) {
+				} catch (error: any) {
+					console.error(error);
 					if (error instanceof AxiosError) {
 						return res
 							.status(error?.response?.status || 404)
@@ -360,128 +221,54 @@ export default async function handler(
 						return res.status(404).json('Unknown error');
 					}
 				}
-			} else {
-				return res.status(401).end();
 			}
-		}
-		if (req.query.pixeldrain === 'add-multiple-files-to-folder') {
-			if (session && session.user) {
-				const userKey: APIKeyData = await getUserKeyFromDB(
-					session.user._id,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				const { fieldsData } = await new Promise((resolve, reject) => {
-					form.parse(
-						req,
-						(
-							error: Error,
-							fieldsData: { [key: string]: string },
-							filesData: { [key: string]: File }
-						) => {
-							if (error) {
-								reject({ error });
-							}
-							if (!fieldsData) {
-								reject(new Error('No folder name or files selected'));
-							}
-							if (Object.keys(fieldsData).length === 0) {
-								reject(new Error('No folder name or files selected'));
-							}
-							resolve({ fieldsData });
-						}
-					);
-				});
-				const idList = [];
-				for (const [key, value] of Object.entries(fieldsData)) {
-					if (key === 'folder') {
-						break;
-					}
-					idList.push({ id: value });
-				}
+			if (query === 'add-multiple-files-to-folder') {
 				try {
-					try {
-						await axios.post(
-							'https://pixeldrain.com/api/list',
-							{
-								title: fieldsData.folder,
-								anonymous: false,
-								files: idList,
-							},
-							{
-								headers: {
-									Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-								},
-							}
-						);
-					} catch (error) {
-						if (error instanceof AxiosError) {
-							return res
-								.status(error?.response?.status || 404)
-								.json(error?.response?.data || 'Unknown error');
-						} else {
-							return res.status(404).json('Unknown error');
+					const form = new formidable.IncomingForm();
+					const { fieldsData }: { fieldsData: { [key: string]: string } } =
+						await new Promise((resolve, reject) => {
+							form.parse(
+								req,
+								(
+									error: Error,
+									fieldsData: { [key: string]: string },
+									filesData: { [key: string]: File }
+								) => {
+									if (error) {
+										reject({ error });
+									}
+									if (!fieldsData) {
+										reject(new Error('No folder name or files selected'));
+									}
+									if (Object.keys(fieldsData).length === 0) {
+										reject(new Error('No folder name or files selected'));
+									}
+									resolve({ fieldsData });
+								}
+							);
+						});
+					const filesIdList = [];
+					for (const [key, value] of Object.entries(fieldsData)) {
+						if (key === 'folder') {
+							continue;
 						}
+						filesIdList.push({ id: value });
 					}
-					return res.status(200).json({ success: true });
-				} catch (error) {
-					if (error instanceof AxiosError) {
-						return res
-							.status(error?.response?.status || 404)
-							.json(error?.response?.data || 'Unknown error');
-					} else {
-						return res.status(404).json('Unknown error');
-					}
-				}
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				const { fieldsData } = await new Promise((resolve, reject) => {
-					form.parse(
-						req,
-						(
-							error: Error,
-							fieldsData: { [key: string]: string },
-							filesData: { [key: string]: File }
-						) => {
-							if (error) {
-								reject({ error });
-							}
-							if (!fieldsData) {
-								reject(new Error('No folder name or files selected'));
-							}
-							if (Object.keys(fieldsData).length === 0) {
-								reject(new Error('No folder name or files selected'));
-							}
-							resolve({ fieldsData });
-						}
-					);
-				});
-				const idList = [];
-				for (const [key, value] of Object.entries(fieldsData)) {
-					if (key === 'folder') {
-						break;
-					}
-					idList.push({ id: value });
-				}
-				try {
-					await axios.post(
+					const apiRes = await axios.post(
 						'https://pixeldrain.com/api/list',
 						{
 							title: fieldsData.folder,
 							anonymous: false,
-							files: idList,
+							files: filesIdList,
 						},
 						{
 							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
 							},
 						}
 					);
-				} catch (error) {
+					return res.status(200).json(apiRes.data.id);
+				} catch (error: any) {
 					if (error instanceof AxiosError) {
 						return res
 							.status(error?.response?.status || 404)
@@ -490,55 +277,67 @@ export default async function handler(
 						return res.status(404).json('Unknown error');
 					}
 				}
-			} else {
-				return res.status(401).end();
 			}
 		}
-	}
-	if (req.method === 'DELETE') {
-		if (req.query.pixeldrain === 'delete-files') {
-			if (session && session.user) {
-				const userKey: APIKeyData = await getUserKeyFromDB(
-					session.user._id,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				const { fieldsData } = await new Promise((resolve, reject) => {
-					form.parse(
-						req,
-						(
-							error: Error,
-							fieldsData: { [key: string]: string },
-							filesData: { [key: string]: File }
-						) => {
-							if (error) {
-								reject({ error });
-							}
-							if (!fieldsData) {
-								reject(new Error('No files selected'));
-							}
-							if (Object.keys(fieldsData).length === 0) {
-								reject(new Error('No files selected'));
-							}
-							resolve({ fieldsData });
-						}
-					);
-				});
+		if (method === 'DELETE') {
+			if (query === 'delete-folder') {
 				try {
-					const idArray = [];
-					for (const [key, id] of Object.entries(fieldsData)) {
-						idArray.push(id);
+					const { id } = req.query;
+					await axios.delete(`https://pixeldrain.com/api/list/${id}`, {
+						headers: {
+							Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
+						},
+					});
+					return res.status(200).json({ success: true });
+				} catch (error: any) {
+					if (error instanceof AxiosError) {
+						return res
+							.status(error?.response?.status || 404)
+							.json(error?.response?.data || 'Unknown error');
+					} else {
+						return res.status(404).json('Unknown error');
 					}
-					const promiseArray = idArray.map((id) =>
+				}
+			}
+			if (query === 'delete-files') {
+				try {
+					const form = new formidable.IncomingForm();
+					const { fieldsData }: { fieldsData: { [key: string]: string } } =
+						await new Promise((resolve, reject) => {
+							form.parse(
+								req,
+								(
+									error: Error,
+									fieldsData: { [key: string]: string },
+									filesData: { [key: string]: File }
+								) => {
+									if (error) {
+										reject({ error });
+									}
+									if (!fieldsData) {
+										reject(new Error('No files selected'));
+									}
+									if (Object.keys(fieldsData).length === 0) {
+										reject(new Error('No files selected'));
+									}
+									resolve({ fieldsData });
+								}
+							);
+						});
+					const filesIdArray = [];
+					for (const [key, id] of Object.entries(fieldsData)) {
+						filesIdArray.push(id);
+					}
+					const promiseArray = filesIdArray.map((id) =>
 						axios.delete(`https://pixeldrain.com/api/file/${id}`, {
 							headers: {
-								Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
+								Authorization: `Basic ${btoa(':' + userKeyData.api_key)}`,
 							},
 						})
 					);
 					await Promise.all(promiseArray);
 					return res.status(200).json({ success: true });
-				} catch (error) {
+				} catch (error: any) {
 					if (error instanceof AxiosError) {
 						return res
 							.status(error?.response?.status || 404)
@@ -547,59 +346,9 @@ export default async function handler(
 						return res.status(404).json('Unknown error');
 					}
 				}
-			} else if (req.cookies.tempUserToken) {
-				const userKey = getUserKeyFromToken(
-					req.cookies.tempUserToken,
-					'pixeldrain'
-				);
-				const form = new formidable.IncomingForm();
-				const { fieldsData } = await new Promise((resolve, reject) => {
-					form.parse(
-						req,
-						(
-							error: Error,
-							fieldsData: { [key: string]: string },
-							filesData: { [key: string]: File }
-						) => {
-							if (error) {
-								reject({ error });
-							}
-							if (!fieldsData) {
-								reject(new Error('No files selected'));
-							}
-							if (Object.keys(fieldsData).length === 0) {
-								reject(new Error('No files selected'));
-							}
-							resolve({ fieldsData });
-						}
-					);
-				});
-				const idArray = [];
-				for (const [key, id] of Object.entries(fieldsData)) {
-					idArray.push(id);
-				}
-				const promiseArray = idArray.map((id) =>
-					axios.delete(`https://pixeldrain.com/api/file/${id}`, {
-						headers: {
-							Authorization: `Basic ${btoa(':' + userKey.api_key)}`,
-						},
-					})
-				);
-				try {
-					await Promise.all(promiseArray);
-					return res.status(200).json({ success: true });
-				} catch (error) {
-					if (error instanceof AxiosError) {
-						return res
-							.status(error?.response?.status || 404)
-							.json(error?.response?.data || 'Unknown error');
-					} else {
-						return res.status(404).json('Unknown error');
-					}
-				}
-			} else {
-				return res.status(401).end();
 			}
 		}
+	} else {
+		return res.status(401).end();
 	}
 }
