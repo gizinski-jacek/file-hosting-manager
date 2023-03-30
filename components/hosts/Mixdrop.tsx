@@ -17,7 +17,7 @@ import {
 	Modal,
 	Typography,
 } from '@mui/material';
-import { Cancel, Delete, Folder, Refresh } from '@mui/icons-material';
+import { Cancel, Folder, Refresh } from '@mui/icons-material';
 import { MixdropFile, MixdropFolder } from '../../lib/types/types';
 import FileDataWrapperMD from '../../lib/wrappers/FileDataWrapperMD';
 
@@ -57,43 +57,34 @@ const Mixdrop = () => {
 
 	const fileRef = useRef<HTMLInputElement>(null);
 
-	const handleGetAllData = useCallback(async () => {
-		try {
-			const res = await axios.get(
-				'/api/host/mixdrop/get-user-files-and-folders',
-				{ withCredentials: true }
-			);
-			setFilesData(res.data.files || res.data);
-			setFoldersData(res.data.folders || res.data);
-			setFetching(false);
-		} catch (error) {
-			console.log(error);
-		}
-	}, []);
-
-	const handleGetFolderData = useCallback(async (value: string) => {
-		try {
-			const res = await axios.get(
-				`/api/host/mixdrop/get-single-folder?id=${value}`
-			);
-			setFilesData(res.data.files || res.data);
-			setFoldersData(res.data.folders || res.data);
-			setFetching(false);
-		} catch (error) {
-			console.log(error);
-		}
-	}, []);
-
-	const handleFetchData = useCallback(async () => {
+	const handleDataFetch = useCallback(async () => {
 		setFetching(true);
-		if (selectedFolder === 'root') {
-			handleGetAllData();
-		} else {
-			handleGetFolderData(selectedFolder);
+		try {
+			const res =
+				selectedFolder === 'root'
+					? await axios.get('/api/host/mixdrop/get-user-files-and-folders', {
+							withCredentials: true,
+					  })
+					: await axios.get(
+							`/api/host/mixdrop/get-single-folder?id=${selectedFolder}`
+					  );
+			setCheckedFilesIds([]);
+			setFilesData(res.data.files || res.data);
+			setFoldersData(res.data.folders || res.data);
+			setFetching(false);
+		} catch (error: any) {
+			console.error(error);
+			setSelectedFolder('root');
+			setBreadcrumbs([{ id: 'root', title: 'My Files' }]);
+			setCheckedFilesIds([]);
+			setFilesData([]);
+			setFoldersData([]);
+			setFetching(false);
 		}
-	}, [selectedFolder, handleGetAllData, handleGetFolderData]);
+	}, [selectedFolder]);
 
 	const handleDownloadSingleFile = async (fileId: string, fileName: string) => {
+		// find API request to download file !!!
 		// try {
 		// 	const res = await axios.get(
 		// 		`/api/host/mixdrop/download-single-file?id=${fileId}`,
@@ -106,8 +97,8 @@ const Mixdrop = () => {
 		// 	document.body.appendChild(link);
 		// 	link.click();
 		// 	return;
-		// } catch (error) {
-		// 	console.log(error);
+		// } catch (error: any) {
+		// 	console.error(error);
 		// }
 	};
 
@@ -143,7 +134,7 @@ const Mixdrop = () => {
 			setFormErrors(errorsArray);
 			return;
 		}
-		setUploadData((prevState) => [...prevState, ...files]);
+		setUploadData((prevState) => [...prevState, ...Array.from(files)]);
 	};
 
 	const handleClearFileList = () => {
@@ -176,10 +167,10 @@ const Mixdrop = () => {
 			if (res.status === 200) {
 				handleResetFormsAndErrors();
 				handleCloseFilesFormModal();
-				handleFetchData();
+				handleDataFetch();
 			}
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -202,10 +193,10 @@ const Mixdrop = () => {
 			if (res.status === 200) {
 				handleResetFormsAndErrors();
 				handleCloseFolderFormModal();
-				handleFetchData();
+				handleDataFetch();
 			}
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -247,8 +238,8 @@ const Mixdrop = () => {
 		// 		link.click();
 		// 		return;
 		// 	});
-		// } catch (error) {
-		// 	console.log(error);
+		// } catch (error: any) {
+		// 	console.error(error);
 		// }
 	};
 
@@ -272,12 +263,13 @@ const Mixdrop = () => {
 		// 		handleCloseFolderFormModal();
 		// 		handleFetchData();
 		// 	}
-		// } catch (error) {
-		// 	console.log(error);
+		// } catch (error: any) {
+		// 	console.error(error);
 		// }
 	};
 
 	const handleDeleteFiles = async () => {
+		// find API request to delete file !!!
 		// try {
 		// 	const res = await axios.delete('/api/host/mixdrop/delete-files', {
 		// 		data: checkedFilesIds,
@@ -290,10 +282,10 @@ const Mixdrop = () => {
 		// 			setSelectedFolder('root');
 		// 		}
 		// 		setCheckedFilesIds([]);
-		// 		handleFetchData();
+		// 		handleDataFetch();
 		// 	}
-		// } catch (error) {
-		// 	console.log(error);
+		// } catch (error: any) {
+		// 	console.error(error);
 		// }
 	};
 
@@ -303,9 +295,9 @@ const Mixdrop = () => {
 	};
 
 	const handleFolderChangeByBreadcrumb = (folder: MixdropFolder) => {
-		setSelectedFolder(folder.id);
 		const folderIndex = breadcrumbs.findIndex((b) => b.id === folder.id);
 		const newState = breadcrumbs.slice(0, folderIndex + 1);
+		setSelectedFolder(folder.id);
 		setBreadcrumbs(newState);
 	};
 
@@ -334,12 +326,8 @@ const Mixdrop = () => {
 	};
 
 	useEffect(() => {
-		handleFetchData();
-	}, [handleFetchData]);
-
-	useEffect(() => {
-		handleFetchData();
-	}, [selectedFolder, handleFetchData]);
+		handleDataFetch();
+	}, [selectedFolder, handleDataFetch]);
 
 	return (
 		<>
@@ -347,7 +335,7 @@ const Mixdrop = () => {
 				{fetching ? (
 					<CircularProgress size={24} sx={{ m: 1 }} />
 				) : (
-					<Refresh sx={{ cursor: 'pointer', m: 1 }} onClick={handleFetchData} />
+					<Refresh sx={{ cursor: 'pointer', m: 1 }} onClick={handleDataFetch} />
 				)}
 				<Breadcrumbs sx={{ display: 'flex', m: 1, mx: 2 }}>
 					{breadcrumbs.map((folder, index) =>
@@ -378,10 +366,10 @@ const Mixdrop = () => {
 					{checkedFilesIds.length > 0 ? (
 						<>
 							<Button type='button' onClick={handleDownloadSelectedFiles}>
-								Download selected files
+								Download files
 							</Button>
 							<Button type='button' onClick={handleDeleteFiles}>
-								Delete selected files
+								Delete files
 							</Button>
 						</>
 					) : null}
