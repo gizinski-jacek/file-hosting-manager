@@ -54,44 +54,43 @@ const Pixeldrain = () => {
 
 	const fileRef = useRef<HTMLInputElement>(null);
 
-	const handleGetAllData = useCallback(async () => {
+	const handleDataFetch = useCallback(async () => {
+		setFetching(true);
 		try {
-			const res: AxiosResponse[] = await axios.all([
-				axios.get('/api/host/pixeldrain/get-user-files', {
-					withCredentials: true,
-				}),
-				axios.get('/api/host/pixeldrain/get-user-folders', {
-					withCredentials: true,
-				}),
-			]);
+			const res: AxiosResponse[] =
+				selectedFolder === 'root'
+					? await axios.all([
+							axios.get('/api/host/pixeldrain/get-user-files', {
+								withCredentials: true,
+							}),
+							axios.get('/api/host/pixeldrain/get-user-folders', {
+								withCredentials: true,
+							}),
+					  ])
+					: await axios.all([
+							axios.get(
+								`/api/host/pixeldrain/get-single-folder?id=${selectedFolder}`,
+								{
+									withCredentials: true,
+								}
+							),
+							axios.get('/api/host/pixeldrain/get-user-folders', {
+								withCredentials: true,
+							}),
+					  ]);
+			setCheckedFilesIds([]);
 			setFilesData(res[0].data);
 			setFoldersData(res[1].data);
 			setFetching(false);
-		} catch (error) {
-			console.log(error);
-		}
-	}, []);
-
-	const handleGetFolderData = useCallback(async (value: string) => {
-		try {
-			const res = await axios.get(
-				`/api/host/pixeldrain/get-single-folder?id=${value}`
-			);
-			setFilesData(res.data);
+		} catch (error: any) {
+			console.error(error);
+			setSelectedFolder('root');
+			setCheckedFilesIds([]);
+			setFilesData([]);
+			setFoldersData([]);
 			setFetching(false);
-		} catch (error) {
-			console.log(error);
 		}
-	}, []);
-
-	const handleFetchData = useCallback(async () => {
-		setFetching(true);
-		if (selectedFolder === 'root') {
-			handleGetAllData();
-		} else {
-			handleGetFolderData(selectedFolder);
-		}
-	}, [selectedFolder, handleGetAllData, handleGetFolderData]);
+	}, [selectedFolder]);
 
 	const handleDownloadSingleFile = async (fileId: string, fileName: string) => {
 		try {
@@ -106,8 +105,8 @@ const Pixeldrain = () => {
 			document.body.appendChild(link);
 			link.click();
 			return;
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -143,7 +142,7 @@ const Pixeldrain = () => {
 			setFormErrors(errorsArray);
 			return;
 		}
-		setUploadData((prevState) => [...prevState, ...files]);
+		setUploadData((prevState) => [...prevState, ...Array.from(files)]);
 	};
 
 	const handleClearFileList = () => {
@@ -176,10 +175,10 @@ const Pixeldrain = () => {
 			if (res.status === 200) {
 				handleResetFormsAndErrors();
 				handleCloseFilesFormModal();
-				handleFetchData();
+				handleDataFetch();
 			}
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -222,8 +221,8 @@ const Pixeldrain = () => {
 				link.click();
 				return;
 			});
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -246,10 +245,10 @@ const Pixeldrain = () => {
 				setCheckedFilesIds([]);
 				handleResetFormsAndErrors();
 				handleCloseFolderFormModal();
-				handleFetchData();
+				setSelectedFolder(res.data);
 			}
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -266,10 +265,25 @@ const Pixeldrain = () => {
 					setSelectedFolder('root');
 				}
 				setCheckedFilesIds([]);
-				handleFetchData();
+				handleDataFetch();
 			}
-		} catch (error) {
-			console.log(error);
+		} catch (error: any) {
+			console.error(error);
+		}
+	};
+
+	const handleDeleteFolder = async () => {
+		try {
+			if (selectedFolder === 'root') return;
+			const res = await axios.delete(
+				`/api/host/pixeldrain/delete-folder?id=${selectedFolder}`
+			);
+			if (res.status === 200) {
+				setSelectedFolder('root');
+				setCheckedFilesIds([]);
+			}
+		} catch (error: any) {
+			console.error(error);
 		}
 	};
 
@@ -302,12 +316,8 @@ const Pixeldrain = () => {
 	};
 
 	useEffect(() => {
-		handleFetchData();
-	}, [handleFetchData]);
-
-	useEffect(() => {
-		handleFetchData();
-	}, [selectedFolder, handleFetchData]);
+		handleDataFetch();
+	}, [selectedFolder, handleDataFetch]);
 
 	return (
 		<>
@@ -315,7 +325,7 @@ const Pixeldrain = () => {
 				{fetching ? (
 					<CircularProgress size={24} sx={{ m: 1 }} />
 				) : (
-					<Refresh sx={{ cursor: 'pointer', m: 1 }} onClick={handleFetchData} />
+					<Refresh sx={{ cursor: 'pointer', m: 1 }} onClick={handleDataFetch} />
 				)}
 				<FormControl sx={{ display: 'flex', m: 1 }} size='small'>
 					<InputLabel htmlFor='folder'>Folder</InputLabel>
@@ -341,16 +351,21 @@ const Pixeldrain = () => {
 					{checkedFilesIds.length > 0 ? (
 						<>
 							<Button type='button' onClick={handleOpenFolderFormModal}>
-								Add selected files to new folder
+								Add to new folder
 							</Button>
 							<Button type='button' onClick={handleDownloadSelectedFiles}>
-								Download selected files
+								Download files
 							</Button>
 							<Button type='button' onClick={handleDeleteFiles}>
-								Delete selected files
+								Delete files
 							</Button>
 						</>
 					) : null}
+					{selectedFolder !== 'root' && (
+						<Button type='button' onClick={handleDeleteFolder}>
+							Delete folder
+						</Button>
+					)}
 					<Modal open={openFilesFormModal} onClose={handleCloseFilesFormModal}>
 						<Box sx={style}>
 							<Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
