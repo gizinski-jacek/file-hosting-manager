@@ -3,7 +3,6 @@ import { useRouter } from 'next/router';
 import { signOut, useSession } from 'next-auth/react';
 import Link from 'next/link';
 import { ThemeContext } from '../hooks/ThemeProvider';
-import { HostContext } from '../hooks/HostProvider';
 import { supportedHostList } from '../lib/defaults';
 import { styled, Theme, CSSObject } from '@mui/material/styles';
 import MuiAppBar, { AppBarProps as MuiAppBarProps } from '@mui/material/AppBar';
@@ -105,7 +104,6 @@ const Drawer = styled(MuiDrawer, {
 const MiniDrawer = () => {
 	const { data: user } = useSession();
 	const { theme, toggleTheme } = useContext(ThemeContext);
-	const { host, updateHost } = useContext(HostContext);
 	const [open, setOpen] = useState(false);
 	const router = useRouter();
 
@@ -115,11 +113,6 @@ const MiniDrawer = () => {
 
 	const handleDrawerClose = () => {
 		setOpen(false);
-	};
-
-	const handleHostChange = (value: string) => {
-		updateHost(value);
-		router.push('/dashboard');
 	};
 
 	const handleThemeToggle = () => {
@@ -288,13 +281,15 @@ const MiniDrawer = () => {
 					{supportedHostList.map((text) => (
 						<ListItem key={text} disablePadding sx={{ display: 'block' }}>
 							<ListItemButton
+								component='a'
+								href={`/dashboard/${text}`}
 								sx={{
-									backgroundColor: host == text ? 'lime' : 'white',
+									backgroundColor:
+										router.query.host === text ? 'lime' : 'white',
 									minHeight: 48,
 									justifyContent: open ? 'initial' : 'center',
 									px: 2.5,
 								}}
-								onClick={() => handleHostChange(text)}
 							>
 								<ListItemIcon
 									sx={{
@@ -305,10 +300,7 @@ const MiniDrawer = () => {
 								>
 									icon
 								</ListItemIcon>
-								<ListItemText
-									primary={text.charAt(0).toUpperCase() + text.slice(1)}
-									sx={{ opacity: open ? 1 : 0 }}
-								/>
+								<ListItemText primary={text} sx={{ opacity: open ? 1 : 0 }} />
 							</ListItemButton>
 						</ListItem>
 					))}
